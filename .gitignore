@@ -1,0 +1,70 @@
+# ---------- OS ----------
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---------- Editor ----------
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ---------- Python ----------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+.env
+.env.*
+!.env.example
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+.coverage.*
+*.egg-info/
+dist/
+build/
+.tox/
+
+# ---------- Node / Frontend ----------
+node_modules/
+.pnpm-store/
+dist/
+.next/
+.nuxt/
+.cache/
+.parcel-cache/
+.vite/
+
+# ---------- Data ----------
+*.csv
+!backend/tests/fixtures/*.csv
+*.parquet
+*.faiss
+*.bin
+*.h5
+*.pkl
+*.db
+*.sqlite
+data/
+uploads/
+
+# ---------- Logs ----------
+*.log
+logs/
+
+# ---------- Secrets ----------
+*.pem
+*.key
+*.crt
+secrets/
+
+# ---------- Docker ----------
+.docker/

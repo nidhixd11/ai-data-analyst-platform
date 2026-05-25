@@ -1,0 +1,72 @@
+# Pre-commit hooks for ai-data-analyst-platform.
+# Runs automatically on every `git commit`.
+# Backend: ruff (lint + format) + mypy (types). Frontend: prettier + eslint.
+#
+# To run manually on all files: `pre-commit run --all-files`
+# To update hook versions: `pre-commit autoupdate`
+
+repos:
+  # ----------- Generic file hygiene -----------
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ['--maxkb=1024']
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+
+  # ----------- Python: ruff (lint + format) -----------
+  # Ruff replaces flake8, isort, and partially black. It's ~10-100x faster.
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.6
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+        files: ^backend/.*\.py$
+      - id: ruff-format
+        files: ^backend/.*\.py$
+
+  # ----------- Python: black (formatter) -----------
+  # Belt-and-suspenders with ruff-format. Keeping for compatibility with
+  # team members who may have IDE plugins expecting black.
+  - repo: https://github.com/psf/black
+    rev: 24.10.0
+    hooks:
+      - id: black
+        language_version: python3.11
+        files: ^backend/.*\.py$
+
+  # ----------- Python: mypy (type checking) -----------
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.13.0
+    hooks:
+      - id: mypy
+        files: ^backend/.*\.py$
+        additional_dependencies:
+          - pydantic>=2.0
+          - types-requests
+        args: [--ignore-missing-imports, --no-strict-optional]
+
+  # ----------- Frontend: prettier (formatter) -----------
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v4.0.0-alpha.8
+    hooks:
+      - id: prettier
+        files: ^frontend/.*\.(ts|tsx|js|jsx|json|css|md)$
+
+  # ----------- Frontend: eslint (linter) -----------
+  # eslint runs via local Node, so we use the system hook to find it
+  # inside frontend/node_modules. Will be wired up properly after T-131.
+  # Commented out for now to avoid "eslint not found" errors before frontend scaffold exists.
+  # - repo: local
+  #   hooks:
+  #     - id: eslint
+  #       name: eslint
+  #       entry: bash -c 'cd frontend && npx eslint'
+  #       language: system
+  #       files: ^frontend/.*\.(ts|tsx|js|jsx)$

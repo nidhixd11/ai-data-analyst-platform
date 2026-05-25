@@ -17,12 +17,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-# ----------------------------------------------------------------------------
-# App metadata
-# ----------------------------------------------------------------------------
+from app.settings import settings
 
-APP_NAME = "ai-data-analyst-platform"
-APP_VERSION = "0.1.0"
+# ----------------------------------------------------------------------------
+# App
+# ----------------------------------------------------------------------------
 
 app = FastAPI(
     title="CSV Insights Chatbot API",
@@ -31,27 +30,19 @@ app = FastAPI(
         "Handles CSV upload, in-memory RAG, and routes questions "
         "to a chosen LLM provider (Groq, Ollama, Gemini, ChatGPT)."
     ),
-    version=APP_VERSION,
+    version=settings.app_version,
 )
 
 
 # ----------------------------------------------------------------------------
 # CORS middleware
 # ----------------------------------------------------------------------------
-# In dev, the React frontend runs on http://localhost:5173 (Vite default).
-# Without CORS, the browser blocks fetch() calls from the frontend to this API.
-# For Phase 1 we allow only known dev origins. Production origins will be added
-# in Phase 2 via environment variables (T-108).
-
-ALLOWED_ORIGINS = [
-    "http://localhost:5173",  # Vite dev server
-    "http://127.0.0.1:5173",  # same, different host form
-    "http://localhost:3000",  # Common alt frontend port
-]
+# Origins come from settings.cors_origins (parsed from CORS_ORIGINS env var).
+# This lets us add prod origins later without touching code.
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
+    allow_origins=settings.cors_origins_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -75,6 +66,7 @@ class HealthResponse(BaseModel):
     status: str
     service: str
     version: str
+    environment: str
 
 
 @app.get(
@@ -83,7 +75,7 @@ class HealthResponse(BaseModel):
     tags=["meta"],
     summary="Liveness check",
     description=(
-        "Returns 200 OK with the service name and version. "
+        "Returns 200 OK with the service name, version, and environment. "
         "Used by uptime monitors and CI smoke tests. Does not check "
         "downstream dependencies (Ollama, Groq, etc) — that's a "
         "future /readiness endpoint."
@@ -93,6 +85,7 @@ def health() -> HealthResponse:
     """Liveness check: the process is up and serving requests."""
     return HealthResponse(
         status="ok",
-        service=APP_NAME,
-        version=APP_VERSION,
+        service=settings.app_name,
+        version=settings.app_version,
+        environment=settings.environment,
     )

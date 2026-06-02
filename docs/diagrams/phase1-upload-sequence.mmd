@@ -1,0 +1,28 @@
+sequenceDiagram
+  autonumber
+  actor U as User
+  participant FE as React Frontend
+  participant BE as FastAPI Backend
+  participant RAG as RAG Engine
+  participant MR as Model Router
+  participant LLM as Selected LLM
+  U->>FE: Upload CSV or Excel file
+  FE->>BE: POST /upload (multipart)
+  BE->>BE: Validate size, MIME, encoding
+  BE->>BE: Detect format (CSV vs Excel)
+  BE->>RAG: Parse file with Pandas / openpyxl
+  RAG->>RAG: Build schema, stats, chunks
+  RAG->>RAG: Embed chunks (Gemini) into FAISS
+  RAG-->>BE: session_id + profile + detected_format
+  BE-->>FE: 200 OK upload response
+  FE-->>U: Render dashboard + chat panel
+  U->>FE: Ask question + pick model
+  FE->>BE: POST /chat {session_id, query, model_id}
+  BE->>RAG: Retrieve relevant context
+  RAG-->>BE: Context chunks + schema
+  BE->>MR: Build prompt and route(model_id)
+  MR->>LLM: Send grounded prompt
+  LLM-->>MR: Generated answer
+  MR-->>BE: Answer text
+  BE-->>FE: Response + context_used
+  FE-->>U: Render answer with source rows

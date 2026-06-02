@@ -8,10 +8,10 @@ backend/
 ├── api/                 # REST endpoints (/upload, /chat, /health)
 ├── rag/                 # RAG engine: prompt builder, retriever, router glue
 ├── retrieval/           # Keyword, aggregate, and embedding retrieval
-├── embeddings/          # sentence-transformers + FAISS index
+├── embeddings/          # Gemini embeddings + FAISS index
 ├── router/              # LLM provider router + adapters
 ├── llm/                 # Provider adapters (Groq, Ollama, Gemini, OpenAI)
-├── profiler/            # CSV schema & stats profiler
+├── profiler/            # CSV/Excel schema & stats profiler
 ├── chunker/             # Row-window + column-summary chunking
 ├── aggregates/          # Pandas aggregate helpers
 ├── insights/            # Auto-insight generator

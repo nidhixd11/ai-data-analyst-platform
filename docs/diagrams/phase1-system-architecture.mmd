@@ -1,0 +1,44 @@
+graph TB
+  User([Business Analyst])
+  subgraph FE[Frontend - React Vite TS]
+    Upload[Upload Zone]
+    Dashboard[Insights Dashboard]
+    Chat[Chat Panel]
+    ModelSelect[Model Selector]
+  end
+  subgraph BE[Backend - FastAPI]
+    API[REST API]
+    Validator[File Validator]
+    Session[In-memory Session Store]
+    Prompt[Prompt Builder]
+  end
+  subgraph RAG[RAG Engine - In Memory]
+    Parser[Pandas Parser CSV plus Excel]
+    Profiler[Schema and Stats Profiler]
+    Retriever[Context Retriever]
+    Embed[Gemini Embedder]
+    FAISS[FAISS Index]
+  end
+  subgraph Router[LLM Gateway / Model Router]
+    Groq[Groq Adapter]
+    Ollama[Ollama Adapter]
+    Gemini[Gemini Adapter]
+    ChatGPT[ChatGPT Adapter]
+  end
+  Redis[(Redis - stubbed Phase 1)]
+  User --> Upload
+  Upload --> API
+  API --> Validator --> Parser --> Profiler --> Session
+  Dashboard <-- API
+  Chat --> API
+  API --> Retriever
+  Retriever --> Session
+  Retriever --> FAISS
+  Embed --> FAISS
+  API --> Prompt --> Router
+  Router --> Groq
+  Router --> Ollama
+  Router --> Gemini
+  Router --> ChatGPT
+  Router --> API --> Chat
+  BE -.-> Redis

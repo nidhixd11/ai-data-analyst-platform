@@ -1,0 +1,11 @@
+flowchart LR
+  F[Uploaded File CSV or Excel] --> V[Validate File]
+  V --> DF[Pandas DataFrame]
+  DF --> P[Schema plus Stats]
+  DF --> C[Create Row/Column Context]
+  C --> E[Gemini Embeddings]
+  E --> IDX[FAISS Index]
+  P --> PR[Prompt = Question plus Schema plus Context]
+  IDX --> R[Retrieve Relevant Context]
+  R --> PR
+  PR --> LLM[Selected LLM] --> A[Grounded Answer]

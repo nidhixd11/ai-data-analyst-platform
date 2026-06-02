@@ -1,9 +1,8 @@
-# CSV Insights Chatbot — Phase 1
+# Data Insights Chatbot — Phase 1
 
-A lean, in-memory RAG prototype that turns any CSV upload into instant insights and natural-language Q&A.
+A lean, in-memory RAG prototype that turns any CSV or Excel upload into instant insights and natural-language Q&A.
 
-Upload a CSV → see schema, stats, and auto-insights → ask questions in plain English → get grounded answers from your choice of LLM provider (Groq, Ollama, Gemini, ChatGPT).
-
+Upload a CSV or Excel file (.csv, .xlsx, .xls) → see schema, stats, and auto-insights → ask questions in plain English → get grounded answers from your choice of LLM provider (Groq, Ollama, Gemini, ChatGPT).
 ## Status
 
 🚧 Phase 1 — Active development. See `docs/` for the full design document and roadmap.

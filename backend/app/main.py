@@ -1,5 +1,5 @@
 """
-FastAPI application entrypoint for the CSV Insights Chatbot.
+FastAPI application entrypoint for the Data Insights Chatbot.
 
 This module defines the FastAPI app, registers middleware (CORS),
 and exposes the /health endpoint used by uptime monitors and CI
@@ -19,16 +19,15 @@ from pydantic import BaseModel
 
 from app.settings import settings
 
-
 # ----------------------------------------------------------------------------
 # App
 # ----------------------------------------------------------------------------
 
 app = FastAPI(
-    title="CSV Insights Chatbot API",
+    title="Data Insights Chatbot API",
     description=(
-        "Phase 1 backend for the CSV Insights Chatbot. "
-        "Handles CSV upload, in-memory RAG, and routes questions "
+        "Phase 1 backend for the Data Insights Chatbot. "
+        "Handles CSV and Excel upload, in-memory RAG, and routes questions "
         "to a chosen LLM provider (Groq, Ollama, Gemini, ChatGPT)."
     ),
     version=settings.app_version,

@@ -53,3 +53,17 @@ disallow_untyped_defs = false
 check_untyped_defs = true
 files = ["backend"]
 exclude = ["\\.venv", "build", "dist"]
+
+[tool.pytest.ini_options]
+# Where pytest looks for tests.
+testpaths = ["backend/tests"]
+
+# Treat `backend` as the root for imports, so `from app.main import app` works.
+pythonpath = ["backend"]
+
+# Verbose output, show short summary at end, fail on warnings.
+addopts = "-v --tb=short"
+
+# Test files & functions must follow these patterns.
+python_files = ["test_*.py"]
+python_functions = ["test_*"]

@@ -1,0 +1,24 @@
+sequenceDiagram
+  autonumber
+  actor U as User
+  participant FE as React UI
+  participant BE as FastAPI
+  participant NL as NL-to-SQL Engine
+  participant PG as PostgreSQL
+  participant LLM as LLM
+  U->>BE: Connect DB + connection string
+  BE->>PG: Introspect schema (tables, cols, FKs)
+  PG-->>BE: Schema stored + embedded in pgvector
+  BE-->>FE: 200 OK schema ready
+  FE-->>U: Render schema sidebar
+  U->>FE: Ask question in chat
+  FE->>BE: POST /chat/db {session, query, model}
+  BE->>NL: Retrieve schema context (pgvector)
+  NL->>LLM: Build SQL generation prompt
+  LLM-->>NL: Generated SQL SELECT
+  NL->>NL: Validate SQL (read-only check)
+  NL->>PG: Execute validated SQL
+  PG-->>NL: Result set
+  NL-->>BE: Format + persist chat history
+  BE-->>FE: Answer + SQL + source tables
+  FE-->>U: Render answer with SQL shown

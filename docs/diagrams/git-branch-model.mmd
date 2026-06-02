@@ -1,0 +1,4 @@
+flowchart LR
+  FB[feature/T-XXX branch from dev] -->|PR plus review| DEV[dev auto-deploy]
+  DEV -->|release branch cut| PP[pre-prod QA and UAT]
+  PP -->|tag plus approval| PROD[prod tagged release v]

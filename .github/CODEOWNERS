@@ -1,0 +1,44 @@
+# CODEOWNERS for ai-data-analyst-platform
+# When a PR changes files matching a pattern below, the listed owners are
+# automatically requested as reviewers.
+#
+# Rules are evaluated TOP TO BOTTOM. The LAST matching rule wins for any file.
+# So put broad rules at the top and specific ones at the bottom.
+#
+# Reference: https://docs.github.com/en/repositories/managing-your-repositories-settings-and-features/customizing-your-repository/about-code-owners
+
+# ---------- Default owner ----------
+# Anything not matched by a more specific rule falls back to Nidhi.
+*                               @nidhixd11
+
+# ---------- Backend ----------
+# General backend work — all three of us care; default reviewer is Nidhi (owns the API surface).
+/backend/                       @nidhixd11
+
+# RAG engine and LLM router — Ashmita's primary lane.
+/backend/rag/                   @haera16
+/backend/router/                @haera16
+/backend/llm/                   @haera16
+/backend/prompts/               @haera16
+
+# Retrieval (embeddings, FAISS), aggregates, auto-insights — Plabani's primary lane.
+/backend/retrieval/             @plaabani
+/backend/embeddings/            @plaabani
+/backend/aggregates/            @plaabani
+/backend/insights/              @plaabani
+
+# Schema profiler and chunker — Plabani owns, Nidhi reviews because ingestion endpoint depends on it.
+/backend/profiler/              @plaabani @nidhixd11
+/backend/chunker/               @plaabani @nidhixd11
+
+# ---------- Frontend ----------
+# Entire frontend — Nidhi's lane.
+/frontend/                      @nidhixd11
+
+# ---------- Infrastructure ----------
+# Docker, compose files, deployment configs — Ashmita owns Docker, Nidhi owns CI/CD.
+/infra/                         @haera16 @nidhixd11
+/.github/workflows/             @nidhixd11
+
+# ---------- Docs ----------
+/docs/                          @nidhixd11 @haera16 @plaab

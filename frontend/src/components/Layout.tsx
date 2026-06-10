@@ -2,21 +2,20 @@ import { type ReactNode } from "react";
 
 interface LayoutProps {
   children: ReactNode;
+  rightRail?: ReactNode;
 }
 
 /**
- * App shell. Renders a top bar with the product name on the left
- * and a theme toggle / avatar slot on the right, plus a full-height
- * main content area.
- *
- * Right now `children` is the only slot. We'll add a sidebar slot
- * in a later task once the chat history UI lands (T-136).
+ * App shell. Top bar + main content + optional right rail.
  */
-export default function Layout({ children }: LayoutProps) {
+export default function Layout({ children, rightRail }: LayoutProps) {
   return (
     <div className="flex h-full flex-col">
       <Header />
-      <main className="flex-1 overflow-auto">{children}</main>
+      <div className="flex flex-1 overflow-hidden">
+        <main className="flex-1 overflow-auto">{children}</main>
+        {rightRail}
+      </div>
     </div>
   );
 }

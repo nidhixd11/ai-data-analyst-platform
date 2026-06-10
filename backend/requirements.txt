@@ -22,6 +22,7 @@ identify==2.6.19
 idna==3.16
 iniconfig==2.3.0
 Jinja2==3.1.6
+loguru==0.7.3
 markdown-it-py==4.2.0
 MarkupSafe==3.0.3
 mdurl==0.1.2

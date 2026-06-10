@@ -16,12 +16,15 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from app.logging import setup_logging
+from app.middleware import RequestIDMiddleware
 
 from app.settings import settings
 
 # ----------------------------------------------------------------------------
 # App
 # ----------------------------------------------------------------------------
+
 
 app = FastAPI(
     title="Data Insights Chatbot API",
@@ -33,6 +36,8 @@ app = FastAPI(
     version=settings.app_version,
 )
 
+setup_logging()
+app.add_middleware(RequestIDMiddleware)
 
 # ----------------------------------------------------------------------------
 # CORS middleware

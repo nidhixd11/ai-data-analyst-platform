@@ -1,19 +1,24 @@
 import { useRef, useState, type ChangeEvent, type DragEvent } from "react";
 import { ALLOWED_EXTENSIONS, formatFileSize, validateFile } from "./validation";
+import { mockUpload, type UploadResponse } from "./mockApi";
 
 type UploadState =
   | { kind: "idle" }
   | { kind: "hover" }
   | { kind: "validating"; file: File }
-  | { kind: "uploading"; file: File; progress: number }
-  | { kind: "ready"; file: File }
+  | { kind: "uploading"; file: File }
+  | { kind: "ready"; file: File; result: UploadResponse }
   | { kind: "error"; file?: File; message: string };
 
-export default function UploadZone() {
+interface UploadZoneProps {
+  onUploadComplete?: (result: UploadResponse) => void;
+}
+
+export default function UploadZone({ onUploadComplete }: UploadZoneProps) {
   const [state, setState] = useState<UploadState>({ kind: "idle" });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  function handleFile(file: File) {
+  async function handleFile(file: File) {
     setState({ kind: "validating", file });
     const result = validateFile(file);
     if (!result.ok) {
@@ -24,17 +29,19 @@ export default function UploadZone() {
       });
       return;
     }
-    setState({ kind: "uploading", file, progress: 0 });
-    let progress = 0;
-    const interval = setInterval(() => {
-      progress += 20;
-      if (progress >= 100) {
-        clearInterval(interval);
-        setState({ kind: "ready", file });
-      } else {
-        setState({ kind: "uploading", file, progress });
-      }
-    }, 200);
+
+    setState({ kind: "uploading", file });
+    try {
+      const response = await mockUpload(file);
+      setState({ kind: "ready", file, result: response });
+      onUploadComplete?.(response);
+    } catch {
+      setState({
+        kind: "error",
+        file,
+        message: "Upload failed. Please try again.",
+      });
+    }
   }
 
   function onInputChange(event: ChangeEvent<HTMLInputElement>) {
@@ -119,15 +126,10 @@ function UploadContent({
     return (
       <div className="flex flex-col items-center gap-3">
         <CloudIcon />
-        <p className="text-sm font-medium">Uploading {state.file.name}…</p>
-        <div className="h-1.5 w-48 overflow-hidden rounded-full bg-[var(--color-border)]">
-          <div
-            className="h-full bg-[var(--color-accent)] transition-all"
-            style={{ width: `${state.progress}%` }}
-          />
-        </div>
+        <p className="text-sm font-medium">Processing {state.file.name}…</p>
+        <Spinner />
         <p className="text-xs text-[var(--color-text-muted)]">
-          {state.progress}%
+          Parsing schema and computing stats
         </p>
       </div>
     );
@@ -139,7 +141,9 @@ function UploadContent({
         <CheckIcon />
         <p className="text-base font-semibold">Ready to analyse</p>
         <p className="text-sm text-[var(--color-text-muted)]">
-          {state.file.name} · {formatFileSize(state.file.size)}
+          {state.file.name} · {formatFileSize(state.file.size)} ·{" "}
+          {state.result.schema.rows.toLocaleString()} rows ·{" "}
+          {state.result.schema.columns} columns
         </p>
         <button
           type="button"
@@ -252,5 +256,11 @@ function AlertIcon() {
         <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
       </svg>
     </div>
+  );
+}
+
+function Spinner() {
+  return (
+    <div className="h-5 w-5 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-[var(--color-accent)]" />
   );
 }

@@ -45,6 +45,7 @@ class Settings(BaseSettings):
     app_name: str = "ai-data-analyst-platform"
     app_version: str = "0.1.0"
     environment: Literal["dev", "staging", "prod"] = "dev"
+    log_level: str = "INFO"
 
     # ------------------------------------------------------------------
     # Server / networking
@@ -84,7 +85,8 @@ class Settings(BaseSettings):
     # ------------------------------------------------------------------
     # Default LLM provider when the user doesn't pick one in the request.
     # ------------------------------------------------------------------
-    default_llm_provider: Literal["groq", "ollama", "gemini", "openai"] = "groq"
+    default_llm_provider: Literal["groq",
+                                  "ollama", "gemini", "openai"] = "groq"
 
 
 @lru_cache

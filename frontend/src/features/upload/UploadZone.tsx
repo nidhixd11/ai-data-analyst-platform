@@ -11,7 +11,7 @@ type UploadState =
   | { kind: "error"; file?: File; message: string };
 
 interface UploadZoneProps {
-  onUploadComplete?: (result: UploadResponse) => void;
+  onUploadComplete?: (result: UploadResponse, file: File) => void;
 }
 
 export default function UploadZone({ onUploadComplete }: UploadZoneProps) {
@@ -34,7 +34,7 @@ export default function UploadZone({ onUploadComplete }: UploadZoneProps) {
     try {
       const response = await mockUpload(file);
       setState({ kind: "ready", file, result: response });
-      onUploadComplete?.(response);
+      onUploadComplete?.(response, file);
     } catch {
       setState({
         kind: "error",

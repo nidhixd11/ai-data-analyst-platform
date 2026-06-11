@@ -1,5 +1,7 @@
 import type { UploadResponse } from "../upload/mockApi";
+import InsightSummary from "./InsightSummary";
 import SchemaTable from "./SchemaTable";
+import TrendChart from "./TrendChart";
 
 interface DashboardProps {
   result: UploadResponse;
@@ -8,14 +10,12 @@ interface DashboardProps {
 }
 
 /**
- * Post-upload view. Replaces the drop zone after a successful upload.
- *
- * Phase 1 layout:
- *  - Header strip: filename + format + "Upload a different file"
- *  - Three stat tiles (rows, columns, detected format)
- *  - Schema table beneath
- *
- * Chart + insight cards land in Dashboard Part 2 (next session).
+ * Post-upload view. Renders:
+ *  - Header strip (filename + reset)
+ *  - Three stat tiles (rows / columns / detected format)
+ *  - Live Insight Summary card (T-133 Part 2A)
+ *  - Revenue Trend chart placeholder (T-133 Part 2A)
+ *  - Schema table
  */
 export default function Dashboard({
   result,
@@ -38,6 +38,9 @@ export default function Dashboard({
           value={result.detected_format.toUpperCase()}
         />
       </div>
+
+      <InsightSummary result={result} />
+      <TrendChart />
 
       <section className="flex flex-col gap-3">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">

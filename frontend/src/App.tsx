@@ -14,6 +14,9 @@ interface UploadSnapshot {
 
 function App() {
   const [snapshot, setSnapshot] = useState<UploadSnapshot | null>(null);
+  const [pendingPrompt, setPendingPrompt] = useState<string | undefined>(
+    undefined,
+  );
 
   function handleUploadComplete(result: UploadResponse, file: File) {
     setSnapshot({ result, filename: file.name });
@@ -21,10 +24,11 @@ function App() {
 
   function handleReset() {
     setSnapshot(null);
+    setPendingPrompt(undefined);
   }
 
   function handleSuggestionPick(prompt: string) {
-    console.log("Suggestion picked:", prompt);
+    setPendingPrompt(prompt);
   }
 
   return (
@@ -41,7 +45,11 @@ function App() {
             filename={snapshot.filename}
             onReset={handleReset}
           />
-          <ChatPanel />
+          <SuggestionPills disabled={false} onPick={handleSuggestionPick} />
+          <ChatPanel
+            initialPrompt={pendingPrompt}
+            onInitialPromptConsumed={() => setPendingPrompt(undefined)}
+          />
         </div>
       )}
     </Layout>

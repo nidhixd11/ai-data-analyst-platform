@@ -2,17 +2,20 @@ import { type ReactNode } from "react";
 
 interface LayoutProps {
   children: ReactNode;
+  leftSidebar?: ReactNode;
   rightRail?: ReactNode;
 }
 
-/**
- * App shell. Top bar + main content + optional right rail.
- */
-export default function Layout({ children, rightRail }: LayoutProps) {
+export default function Layout({
+  children,
+  leftSidebar,
+  rightRail,
+}: LayoutProps) {
   return (
     <div className="flex h-full flex-col">
       <Header />
       <div className="flex flex-1 overflow-hidden">
+        {leftSidebar}
         <main className="flex-1 overflow-auto">{children}</main>
         {rightRail}
       </div>
@@ -26,7 +29,8 @@ function Header() {
       <div className="flex items-center gap-2">
         <div className="h-6 w-6 rounded-md bg-[var(--color-accent)]" />
         <span className="text-sm font-semibold tracking-tight">
-          Data Insights Chatbot
+          <span className="hidden sm:inline">Data Insights Chatbot</span>
+          <span className="sm:hidden">Insights</span>
         </span>
       </div>
       <div className="flex items-center gap-3">

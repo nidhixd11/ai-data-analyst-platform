@@ -109,3 +109,32 @@ function randomId(): string {
   }
   return Math.random().toString(36).slice(2, 12);
 }
+/* -------------------------------------------------------------------------- */
+/* Active session ID helpers                                                  */
+/* Persisted separately so we can restore the user's last open session        */
+/* across page reloads.                                                       */
+/* -------------------------------------------------------------------------- */
+
+const ACTIVE_KEY = "data-insights-chatbot:active-session";
+
+/** Get the last active session id, or null if none. */
+export function loadActiveSessionId(): string | null {
+  try {
+    return localStorage.getItem(ACTIVE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+/** Persist the active session id (or clear it by passing null). */
+export function saveActiveSessionId(id: string | null): void {
+  try {
+    if (id === null) {
+      localStorage.removeItem(ACTIVE_KEY);
+    } else {
+      localStorage.setItem(ACTIVE_KEY, id);
+    }
+  } catch {
+    // Silently ignore storage failures.
+  }
+}

@@ -8,54 +8,76 @@ import ChatPanel from "./features/chat/ChatPanel";
 import SessionsSidebar from "./features/sessions/SessionsSidebar";
 import {
   loadSessions,
+  loadActiveSessionId,
+  saveActiveSessionId,
   createSession,
   addSession,
   deleteSession,
+  updateSession,
   type Session,
 } from "./features/sessions/sessionStorage";
 import type { UploadResponse } from "./features/upload/mockApi";
+import type { ChatMessage } from "./features/chat/mockChat";
 
 function App() {
   const [sessions, setSessions] = useState<Session[]>([]);
-  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const [activeSessionId, setActiveSessionIdState] = useState<string | null>(
+    null,
+  );
   const [pendingPrompt, setPendingPrompt] = useState<string | undefined>(
     undefined,
   );
 
-  // Load saved sessions on first mount.
+  // Load saved sessions + last active session on first mount.
   useEffect(() => {
-    setSessions(loadSessions());
+    const stored = loadSessions();
+    setSessions(stored);
+    const lastActive = loadActiveSessionId();
+    // Only restore if the id still exists in the stored list.
+    if (lastActive && stored.some((s) => s.id === lastActive)) {
+      setActiveSessionIdState(lastActive);
+    }
   }, []);
+
+  /** Wrapped setter that also persists the active id. */
+  function setActiveSession(id: string | null) {
+    setActiveSessionIdState(id);
+    saveActiveSessionId(id);
+  }
 
   const activeSession = sessions.find((s) => s.id === activeSessionId) ?? null;
 
   function handleUploadComplete(result: UploadResponse, file: File) {
     const session = createSession(result, file.name);
     setSessions((prev) => addSession(prev, session));
-    setActiveSessionId(session.id);
+    setActiveSession(session.id);
   }
 
   function handleNewSession() {
-    setActiveSessionId(null);
+    setActiveSession(null);
     setPendingPrompt(undefined);
   }
 
   function handleSelectSession(id: string) {
-    // Part B will restore the full session state.
-    // For now, just mark it active so the sidebar reflects the click.
-    setActiveSessionId(id);
+    setActiveSession(id);
     setPendingPrompt(undefined);
   }
 
   function handleDeleteSession(id: string) {
     setSessions((prev) => deleteSession(prev, id));
     if (activeSessionId === id) {
-      setActiveSessionId(null);
+      setActiveSession(null);
     }
   }
 
   function handleSuggestionPick(prompt: string) {
     setPendingPrompt(prompt);
+  }
+
+  /** Persist chat messages for the active session. */
+  function handleMessagesChange(messages: ChatMessage[]) {
+    if (!activeSessionId) return;
+    setSessions((prev) => updateSession(prev, activeSessionId, { messages }));
   }
 
   return (
@@ -85,8 +107,12 @@ function App() {
           />
           <SuggestionPills disabled={false} onPick={handleSuggestionPick} />
           <ChatPanel
+            // Keying by session id resets local chat input/state when switching.
+            key={activeSession.id}
             initialPrompt={pendingPrompt}
             onInitialPromptConsumed={() => setPendingPrompt(undefined)}
+            messages={activeSession.messages}
+            onMessagesChange={handleMessagesChange}
           />
         </div>
       )}

@@ -8,13 +8,18 @@ import type { MessageContext } from "./mockContext";
 interface ChatPanelProps {
   initialPrompt?: string;
   onInitialPromptConsumed?: () => void;
+  /** Current conversation — owned by the parent so it can be persisted. */
+  messages: ChatMessageType[];
+  /** Called whenever the conversation changes (new user / assistant turn or clear). */
+  onMessagesChange: (messages: ChatMessageType[]) => void;
 }
 
 export default function ChatPanel({
   initialPrompt,
   onInitialPromptConsumed,
+  messages,
+  onMessagesChange,
 }: ChatPanelProps) {
-  const [messages, setMessages] = useState<ChatMessageType[]>([]);
   const [input, setInput] = useState("");
   const [isThinking, setIsThinking] = useState(false);
   const [model, setModel] = useState<ModelId>("groq");
@@ -48,16 +53,17 @@ export default function ChatPanel({
       timestamp: Date.now(),
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    const afterUser = [...messages, userMessage];
+    onMessagesChange(afterUser);
     setInput("");
     setIsThinking(true);
 
     try {
       const response = await mockChatReply(trimmed, model);
-      setMessages((prev) => [...prev, response.message]);
+      onMessagesChange([...afterUser, response.message]);
     } catch {
-      setMessages((prev) => [
-        ...prev,
+      onMessagesChange([
+        ...afterUser,
         {
           id: randomId(),
           role: "assistant",
@@ -91,7 +97,7 @@ export default function ChatPanel({
             {hasMessages && (
               <button
                 type="button"
-                onClick={() => setMessages([])}
+                onClick={() => onMessagesChange([])}
                 className="text-xs font-medium text-[var(--color-text-muted)] hover:text-[var(--color-accent)]"
               >
                 Clear conversation

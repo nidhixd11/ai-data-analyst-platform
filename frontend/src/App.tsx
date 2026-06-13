@@ -4,6 +4,7 @@ import RightRail from "./components/RightRail";
 import UploadZone from "./features/upload/UploadZone";
 import SuggestionPills from "./features/upload/SuggestionPills";
 import Dashboard from "./features/dashboard/Dashboard";
+import ChatPanel from "./features/chat/ChatPanel";
 import type { UploadResponse } from "./features/upload/mockApi";
 
 interface UploadSnapshot {
@@ -23,7 +24,6 @@ function App() {
   }
 
   function handleSuggestionPick(prompt: string) {
-    // Stub for now — T-134 will wire this to the chat composer.
     console.log("Suggestion picked:", prompt);
   }
 
@@ -35,11 +35,14 @@ function App() {
           <SuggestionPills disabled onPick={handleSuggestionPick} />
         </div>
       ) : (
-        <Dashboard
-          result={snapshot.result}
-          filename={snapshot.filename}
-          onReset={handleReset}
-        />
+        <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-6 py-10">
+          <Dashboard
+            result={snapshot.result}
+            filename={snapshot.filename}
+            onReset={handleReset}
+          />
+          <ChatPanel />
+        </div>
       )}
     </Layout>
   );

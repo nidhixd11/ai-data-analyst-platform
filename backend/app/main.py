@@ -16,15 +16,20 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from app.logging import setup_logging
-from app.middleware import RequestIDMiddleware
 
+from app.log_config import setup_logging
+from app.middleware import RequestIDMiddleware
 from app.settings import settings
+# Logging
+# ----------------------------------------------------------------------------
+# Must be called before the app is created so that even startup errors
+# are captured in the structured format.
+
+setup_logging()
 
 # ----------------------------------------------------------------------------
 # App
 # ----------------------------------------------------------------------------
-
 
 app = FastAPI(
     title="Data Insights Chatbot API",
@@ -36,14 +41,13 @@ app = FastAPI(
     version=settings.app_version,
 )
 
-setup_logging()
-app.add_middleware(RequestIDMiddleware)
-
 # ----------------------------------------------------------------------------
 # CORS middleware
 # ----------------------------------------------------------------------------
 # Origins come from settings.cors_origins (parsed from CORS_ORIGINS env var).
 # This lets us add prod origins later without touching code.
+
+app.add_middleware(RequestIDMiddleware)
 
 app.add_middleware(
     CORSMiddleware,

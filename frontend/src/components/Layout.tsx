@@ -22,7 +22,7 @@ export default function Layout({ children, rightRail }: LayoutProps) {
 
 function Header() {
   return (
-    <header className="flex h-14 items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-surface)] px-6">
+    <header className="flex h-14 items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-surface)] px-4 sm:px-6">
       <div className="flex items-center gap-2">
         <div className="h-6 w-6 rounded-md bg-[var(--color-accent)]" />
         <span className="text-sm font-semibold tracking-tight">

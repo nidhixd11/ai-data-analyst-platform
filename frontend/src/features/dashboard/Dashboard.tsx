@@ -62,7 +62,7 @@ function HeaderStrip({
   onReset: () => void;
 }) {
   return (
-    <header className="flex items-center justify-between gap-4">
+    <header className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center gap-3">
         <FileIcon />
         <div className="flex flex-col">

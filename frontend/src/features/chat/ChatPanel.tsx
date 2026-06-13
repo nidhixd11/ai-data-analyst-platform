@@ -1,25 +1,36 @@
 import { useState, useRef, useEffect, type KeyboardEvent } from "react";
 import ChatMessage from "./ChatMessage";
+import ModelPicker, { type ModelId } from "./ModelPicker";
 import { mockChatReply, type ChatMessage as ChatMessageType } from "./mockChat";
 
-/**
- * Chat panel — renders below the dashboard.
- *
- * Has 3 states:
- *  - Empty (no messages yet): shows a hint
- *  - Active: scrollable message list + input
- *  - Thinking: assistant is "typing" (shows animated dots)
- */
-export default function ChatPanel() {
+interface ChatPanelProps {
+  initialPrompt?: string;
+  onInitialPromptConsumed?: () => void;
+}
+
+export default function ChatPanel({
+  initialPrompt,
+  onInitialPromptConsumed,
+}: ChatPanelProps) {
   const [messages, setMessages] = useState<ChatMessageType[]>([]);
   const [input, setInput] = useState("");
   const [isThinking, setIsThinking] = useState(false);
+  const [model, setModel] = useState<ModelId>("groq");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Auto-scroll to the latest message when new ones arrive.
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isThinking]);
+
+  useEffect(() => {
+    if (initialPrompt) {
+      setInput(initialPrompt);
+      textareaRef.current?.focus();
+      onInitialPromptConsumed?.();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialPrompt]);
 
   async function handleSend() {
     const trimmed = input.trim();
@@ -55,7 +66,6 @@ export default function ChatPanel() {
   }
 
   function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
-    // Send on Enter, but allow Shift+Enter for a new line.
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
@@ -66,22 +76,24 @@ export default function ChatPanel() {
 
   return (
     <section className="flex flex-col gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
-      <header className="flex items-center justify-between">
+      <header className="flex items-center justify-between gap-2">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
           Chat
         </h2>
-        {hasMessages && (
-          <button
-            type="button"
-            onClick={() => setMessages([])}
-            className="text-xs font-medium text-[var(--color-text-muted)] hover:text-[var(--color-accent)]"
-          >
-            Clear conversation
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          <ModelPicker value={model} onChange={setModel} />
+          {hasMessages && (
+            <button
+              type="button"
+              onClick={() => setMessages([])}
+              className="text-xs font-medium text-[var(--color-text-muted)] hover:text-[var(--color-accent)]"
+            >
+              Clear conversation
+            </button>
+          )}
+        </div>
       </header>
 
-      {/* Messages area */}
       <div className="flex max-h-96 min-h-[12rem] flex-col gap-3 overflow-y-auto">
         {!hasMessages && !isThinking && <EmptyState />}
         {messages.map((m) => (
@@ -91,9 +103,9 @@ export default function ChatPanel() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input area */}
       <div className="flex items-end gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-2">
         <textarea
+          ref={textareaRef}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
@@ -147,6 +159,12 @@ function ThinkingBubble() {
   return (
     <div className="flex w-full justify-start">
       <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3">
+        <div className="mb-1.5 flex items-center gap-1.5">
+          <PulsingSpark />
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-accent)]">
+            Analysing your data
+          </span>
+        </div>
         <div className="flex items-center gap-1.5">
           <Dot delay="0s" />
           <Dot delay="0.15s" />
@@ -154,6 +172,22 @@ function ThinkingBubble() {
         </div>
       </div>
     </div>
+  );
+}
+
+function PulsingSpark() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-3 w-3 animate-pulse text-[var(--color-accent)]"
+    >
+      <path d="M12 3l2.3 5.2L20 10l-4.5 3.2L17 19l-5-3-5 3 1.5-5.8L4 10l5.7-1.8L12 3z" />
+    </svg>
   );
 }
 

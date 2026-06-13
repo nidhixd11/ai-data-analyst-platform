@@ -118,7 +118,7 @@ export default function ChatPanel({
           onClick={handleSend}
           disabled={!input.trim() || isThinking}
           className={[
-            "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition",
+            "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition sm:h-9 sm:w-9",
             input.trim() && !isThinking
               ? "bg-[var(--color-accent)] text-white hover:bg-[var(--color-accent-hover)]"
               : "cursor-not-allowed bg-[var(--color-border)] text-[var(--color-text-muted)]",

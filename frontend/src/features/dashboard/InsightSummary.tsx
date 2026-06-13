@@ -22,7 +22,7 @@ export default function InsightSummary({ result }: InsightSummaryProps) {
 
   return (
     <article className="overflow-hidden rounded-2xl border-l-4 border-l-[var(--color-accent)] bg-[var(--color-surface)] shadow-sm">
-      <div className="flex items-start justify-between gap-4 border-b border-[var(--color-border)] px-5 py-4">
+      <div className="flex flex-col items-start gap-3 border-b border-[var(--color-border)] px-5 py-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div className="flex items-center gap-2">
           <SparkIcon />
           <h3 className="text-base font-semibold tracking-tight">

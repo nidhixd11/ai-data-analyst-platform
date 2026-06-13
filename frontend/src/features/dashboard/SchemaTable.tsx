@@ -13,41 +13,43 @@ interface SchemaTableProps {
 export default function SchemaTable({ columns }: SchemaTableProps) {
   return (
     <div className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]">
-      <table className="w-full text-sm">
-        <thead className="border-b border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-text-muted)_8%,transparent)]">
-          <tr>
-            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
-              Column
-            </th>
-            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
-              Type
-            </th>
-            <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
-              Null %
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {columns.map((col, idx) => (
-            <tr
-              key={col.name}
-              className={
-                idx !== columns.length - 1
-                  ? "border-b border-[var(--color-border)]"
-                  : ""
-              }
-            >
-              <td className="px-4 py-3 font-medium">{col.name}</td>
-              <td className="px-4 py-3">
-                <DtypeBadge dtype={col.dtype} />
-              </td>
-              <td className="px-4 py-3 text-right tabular-nums">
-                {col.null_pct.toFixed(1)}%
-              </td>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[420px] text-sm">
+          <thead className="border-b border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-text-muted)_8%,transparent)]">
+            <tr>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+                Column
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+                Type
+              </th>
+              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+                Null %
+              </th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {columns.map((col, idx) => (
+              <tr
+                key={col.name}
+                className={
+                  idx !== columns.length - 1
+                    ? "border-b border-[var(--color-border)]"
+                    : ""
+                }
+              >
+                <td className="px-4 py-3 font-medium">{col.name}</td>
+                <td className="px-4 py-3">
+                  <DtypeBadge dtype={col.dtype} />
+                </td>
+                <td className="px-4 py-3 text-right tabular-nums">
+                  {col.null_pct.toFixed(1)}%
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

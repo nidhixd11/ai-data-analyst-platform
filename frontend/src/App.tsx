@@ -39,7 +39,7 @@ function App() {
           <SuggestionPills disabled onPick={handleSuggestionPick} />
         </div>
       ) : (
-        <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-6 py-10">
+        <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 py-6 sm:px-6 sm:py-10">
           <Dashboard
             result={snapshot.result}
             filename={snapshot.filename}

@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect, type KeyboardEvent } from "react";
 import ChatMessage from "./ChatMessage";
 import ModelPicker, { type ModelId } from "./ModelPicker";
+import ContextDrawer from "./ContextDrawer";
 import { mockChatReply, type ChatMessage as ChatMessageType } from "./mockChat";
+import type { MessageContext } from "./mockContext";
 
 interface ChatPanelProps {
   initialPrompt?: string;
@@ -16,6 +18,9 @@ export default function ChatPanel({
   const [input, setInput] = useState("");
   const [isThinking, setIsThinking] = useState(false);
   const [model, setModel] = useState<ModelId>("groq");
+  const [activeContext, setActiveContext] = useState<MessageContext | null>(
+    null,
+  );
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -48,7 +53,7 @@ export default function ChatPanel({
     setIsThinking(true);
 
     try {
-      const response = await mockChatReply(trimmed);
+      const response = await mockChatReply(trimmed, model);
       setMessages((prev) => [...prev, response.message]);
     } catch {
       setMessages((prev) => [
@@ -75,59 +80,72 @@ export default function ChatPanel({
   const hasMessages = messages.length > 0;
 
   return (
-    <section className="flex flex-col gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
-      <header className="flex items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
-          Chat
-        </h2>
-        <div className="flex items-center gap-3">
-          <ModelPicker value={model} onChange={setModel} />
-          {hasMessages && (
-            <button
-              type="button"
-              onClick={() => setMessages([])}
-              className="text-xs font-medium text-[var(--color-text-muted)] hover:text-[var(--color-accent)]"
-            >
-              Clear conversation
-            </button>
-          )}
+    <>
+      <section className="flex flex-col gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
+        <header className="flex items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+            Chat
+          </h2>
+          <div className="flex items-center gap-3">
+            <ModelPicker value={model} onChange={setModel} />
+            {hasMessages && (
+              <button
+                type="button"
+                onClick={() => setMessages([])}
+                className="text-xs font-medium text-[var(--color-text-muted)] hover:text-[var(--color-accent)]"
+              >
+                Clear conversation
+              </button>
+            )}
+          </div>
+        </header>
+
+        <div className="flex max-h-96 min-h-[12rem] flex-col gap-3 overflow-y-auto">
+          {!hasMessages && !isThinking && <EmptyState />}
+          {messages.map((m) => (
+            <ChatMessage
+              key={m.id}
+              message={m}
+              onViewContext={
+                m.context ? () => setActiveContext(m.context!) : undefined
+              }
+            />
+          ))}
+          {isThinking && <ThinkingBubble />}
+          <div ref={messagesEndRef} />
         </div>
-      </header>
 
-      <div className="flex max-h-96 min-h-[12rem] flex-col gap-3 overflow-y-auto">
-        {!hasMessages && !isThinking && <EmptyState />}
-        {messages.map((m) => (
-          <ChatMessage key={m.id} message={m} />
-        ))}
-        {isThinking && <ThinkingBubble />}
-        <div ref={messagesEndRef} />
-      </div>
+        <div className="flex items-end gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-2">
+          <textarea
+            ref={textareaRef}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Ask about your data…"
+            rows={1}
+            className="flex-1 resize-none bg-transparent px-2 py-1.5 text-sm outline-none placeholder:text-[var(--color-text-muted)]"
+          />
+          <button
+            type="button"
+            onClick={handleSend}
+            disabled={!input.trim() || isThinking}
+            className={[
+              "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition sm:h-9 sm:w-9",
+              input.trim() && !isThinking
+                ? "bg-[var(--color-accent)] text-white hover:bg-[var(--color-accent-hover)]"
+                : "cursor-not-allowed bg-[var(--color-border)] text-[var(--color-text-muted)]",
+            ].join(" ")}
+          >
+            <SendIcon />
+          </button>
+        </div>
+      </section>
 
-      <div className="flex items-end gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-2">
-        <textarea
-          ref={textareaRef}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Ask about your data…"
-          rows={1}
-          className="flex-1 resize-none bg-transparent px-2 py-1.5 text-sm outline-none placeholder:text-[var(--color-text-muted)]"
-        />
-        <button
-          type="button"
-          onClick={handleSend}
-          disabled={!input.trim() || isThinking}
-          className={[
-            "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition sm:h-9 sm:w-9",
-            input.trim() && !isThinking
-              ? "bg-[var(--color-accent)] text-white hover:bg-[var(--color-accent-hover)]"
-              : "cursor-not-allowed bg-[var(--color-border)] text-[var(--color-text-muted)]",
-          ].join(" ")}
-        >
-          <SendIcon />
-        </button>
-      </div>
-    </section>
+      <ContextDrawer
+        context={activeContext}
+        onClose={() => setActiveContext(null)}
+      />
+    </>
   );
 }
 

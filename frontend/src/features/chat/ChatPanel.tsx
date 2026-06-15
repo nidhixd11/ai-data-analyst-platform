@@ -6,6 +6,7 @@ import { mockChatReply, type ChatMessage as ChatMessageType } from "./mockChat";
 import type { MessageContext } from "./mockContext";
 
 interface ChatPanelProps {
+  sessionId: string;
   initialPrompt?: string;
   onInitialPromptConsumed?: () => void;
   /** Current conversation — owned by the parent so it can be persisted. */
@@ -15,6 +16,7 @@ interface ChatPanelProps {
 }
 
 export default function ChatPanel({
+  sessionId,
   initialPrompt,
   onInitialPromptConsumed,
   messages,
@@ -59,7 +61,7 @@ export default function ChatPanel({
     setIsThinking(true);
 
     try {
-      const response = await mockChatReply(trimmed, model);
+      const response = await mockChatReply(sessionId, trimmed, model);
       onMessagesChange([...afterUser, response.message]);
     } catch {
       onMessagesChange([

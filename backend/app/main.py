@@ -16,10 +16,15 @@ from pydantic import BaseModel
 from app.chunking.chunker import DatasetChunker
 from app.ingestion.parser import DatasetProfiler
 from app.insights.generator import AutoInsightGenerator
-from app.logging import setup_logging
+from app.log_config import setup_logging
 from app.middleware import RequestIDMiddleware
 from app.schema.summary import SchemaSummaryBuilder
 from app.settings import settings
+
+# Logging
+# Must be called before the app is created so that even startup errors
+# are captured in the structured format.
+setup_logging()
 
 # ============================================================================
 # App
@@ -33,7 +38,10 @@ app = FastAPI(
     ),
     version=settings.app_version,
 )
-setup_logging()
+
+# ============================================================================
+# Middleware
+# ============================================================================
 app.add_middleware(RequestIDMiddleware)
 app.add_middleware(
     CORSMiddleware,

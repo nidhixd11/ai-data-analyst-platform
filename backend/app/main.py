@@ -22,13 +22,21 @@ from app.schema.summary import SchemaSummaryBuilder
 from app.settings import settings
 
 # Logging
+# ----------------------------------------------------------------------------
+# Must be called before the app is created so that even startup errors
+# are captured in the structured format.
+
+setup_logging()
+
+# Logging
 # Must be called before the app is created so that even startup errors
 # are captured in the structured format.
 setup_logging()
 
 # ============================================================================
 # App
-# ============================================================================
+# ----------------------------------------------------------------------------
+
 app = FastAPI(
     title="Data Insights Chatbot API",
     description=(
@@ -39,10 +47,14 @@ app = FastAPI(
     version=settings.app_version,
 )
 
-# ============================================================================
-# Middleware
-# ============================================================================
+# ----------------------------------------------------------------------------
+# CORS middleware
+# ----------------------------------------------------------------------------
+# Origins come from settings.cors_origins (parsed from CORS_ORIGINS env var).
+# This lets us add prod origins later without touching code.
+
 app.add_middleware(RequestIDMiddleware)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,

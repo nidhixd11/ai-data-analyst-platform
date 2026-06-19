@@ -12,14 +12,15 @@ export interface ColumnDetail {
 export interface UploadResponse {
   session_id: string;
   detected_format: "csv" | "xlsx" | "xls";
-  schema: {
-    rows: number;
-    columns: number;
-    columns_detail: ColumnDetail[];
-  };
+  rows: number;
+  columns: number;
+  null_percentage: number;
+  memory_mb: number;
+  schema: ColumnDetail[];
   preview: Record<string, unknown>[];
   insights: string[];
 }
+
 export interface ChatRequest {
   session_id: string;
   model_id: string;

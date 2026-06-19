@@ -58,3 +58,6 @@ watchfiles==1.2.0
 websockets==16.0
 pandas
 openpyxl
+numpy
+google-generativeai
+faiss-cpu

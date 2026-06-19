@@ -51,7 +51,6 @@ export default function Dashboard({
     </div>
   );
 }
-
 function HeaderStrip({
   filename,
   detectedFormat,
@@ -61,16 +60,29 @@ function HeaderStrip({
   detectedFormat: string;
   onReset: () => void;
 }) {
+  const formatLabel = detectedFormat.toUpperCase();
+  const formatColor =
+    detectedFormat === "csv"
+      ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-100"
+      : "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-100";
+
   return (
     <header className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center gap-3">
         <FileIcon />
         <div className="flex flex-col">
-          <span className="text-base font-semibold tracking-tight">
-            {filename}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-base font-semibold tracking-tight">
+              {filename}
+            </span>
+            <span
+              className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${formatColor}`}
+            >
+              {formatLabel}
+            </span>
+          </div>
           <span className="text-xs text-[var(--color-text-muted)]">
-            Parsed as {detectedFormat.toUpperCase()} · ready for analysis
+            Ready for analysis
           </span>
         </div>
       </div>

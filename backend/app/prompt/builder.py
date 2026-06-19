@@ -1,4 +1,4 @@
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 
 # This is the exact template from your design document.
@@ -135,7 +135,7 @@ class PromptBuilder:
         user_question: str,
         schema_summary: Dict[str, Any],
         retrieved_chunks: List[Dict[str, Any]],
-        chat_history: List[Dict[str, str]] = None,
+        chat_history: Optional[List[Dict[str, str]]] = None,
     ) -> str:
         """
         Main method — call this to get the final prompt string.

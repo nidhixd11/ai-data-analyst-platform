@@ -80,7 +80,7 @@ class Settings(BaseSettings):
     openai_api_key: SecretStr | None = None
 
     # Ollama runs locally; no key, just a host URL.
-    ollama_host: str = "http://localhost:11434"
+    ollama_base_url: str = "http://localhost:11434"
 
     # ------------------------------------------------------------------
     # Default LLM provider when the user doesn't pick one in the request.

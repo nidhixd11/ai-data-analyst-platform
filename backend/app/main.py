@@ -9,7 +9,7 @@ import tempfile
 import uuid
 from pathlib import Path
 
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -215,9 +215,17 @@ class ChatRequest(BaseModel):
     question: str
 
 
+class Citation(BaseModel):
+    chunk_id: int
+    chunk_text: str
+    source_rows: list[int]
+    relevance_score: float
+
+
 class ChatResponse(BaseModel):
     answer: str
     context_used: list[str]
+    citations: list[Citation]
     suggested_chart: str | None
 
 
@@ -225,19 +233,33 @@ class ChatResponse(BaseModel):
     "/chat",
     response_model=ChatResponse,
     tags=["chat"],
-    summary="Ask a question about the uploaded file",
+    summary="Ask a question about the file",
 )
 async def chat(req: ChatRequest) -> ChatResponse:
     """
-    Ask a natural-language question. Returns answer + context used.
+    Ask a natural-language question. Returns answer + citations of chunks used.
     Stub version — real implementation will use RAG + LLM router.
     """
+    # Get the session
+    session = sessions.get(req.session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    # For now, return first 3 chunks as citations
+    chunks = session.get("chunks", [])
+    citations = [
+        Citation(
+            chunk_id=i,
+            chunk_text=chunk.get("text", "")[:100],  # First 100 chars
+            source_rows=chunk.get("row_indices", []),
+            relevance_score=0.85,  # Placeholder
+        )
+        for i, chunk in enumerate(chunks[:3])
+    ]
+
     return ChatResponse(
         answer=f"Based on the data, the answer to '{req.question}' is that Product A leads with 42% market share.",
-        context_used=[
-            "columns: product, sales, region",
-            "rows: 0-250",
-            "aggregates: sum(sales) by region",
-        ],
+        context_used=[c.chunk_text for c in citations],
+        citations=citations,
         suggested_chart="bar",
     )

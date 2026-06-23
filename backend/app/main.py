@@ -14,6 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from app.chunking.chunker import DatasetChunker
+from app.gateway.router import ModelRouter
 from app.ingestion.parser import DatasetProfiler
 from app.insights.generator import AutoInsightGenerator
 from app.log_config import setup_logging
@@ -229,6 +230,10 @@ class ChatResponse(BaseModel):
     suggested_chart: str | None
 
 
+# Initialize router (at module level, once)
+router = ModelRouter()
+
+
 @app.post(
     "/chat",
     response_model=ChatResponse,
@@ -237,28 +242,50 @@ class ChatResponse(BaseModel):
 )
 async def chat(req: ChatRequest) -> ChatResponse:
     """
-    Ask a natural-language question. Returns answer + citations of chunks used.
-    Stub version — real implementation will use RAG + LLM router.
+    Ask a natural-language question. Routes to LLM provider.
+    Returns answer + citations of chunks used.
     """
     # Get the session
     session = sessions.get(req.session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    # For now, return first 3 chunks as citations
+    # Get chunks for citations
     chunks = session.get("chunks", [])
     citations = [
         Citation(
             chunk_id=i,
-            chunk_text=chunk.get("text", "")[:100],  # First 100 chars
+            chunk_text=chunk.get("text", "")[:100],
             source_rows=chunk.get("row_indices", []),
-            relevance_score=0.85,  # Placeholder
+            relevance_score=0.85,
         )
         for i, chunk in enumerate(chunks[:3])
     ]
 
+    # Build prompt with schema + context
+    schema_summary = session.get("summary", {})
+    context_text = "\n".join([c.chunk_text for c in citations])
+
+    prompt = f"""You are a careful data analyst. Answer only using the uploaded data.
+
+Schema:
+{str(schema_summary)[:500]}
+
+Context:
+{context_text}
+
+Question: {req.question}
+
+Answer concisely. Say 'insufficient data' if you can't answer."""
+
+    # Route to LLM
+    try:
+        answer = router.route(req.model_id, prompt)  # type: ignore
+    except Exception as e:
+        answer = f"Error calling LLM: {str(e)}"
+
     return ChatResponse(
-        answer=f"Based on the data, the answer to '{req.question}' is that Product A leads with 42% market share.",
+        answer=answer,
         context_used=[c.chunk_text for c in citations],
         citations=citations,
         suggested_chart="bar",

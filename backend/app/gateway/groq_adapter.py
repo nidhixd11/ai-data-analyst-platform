@@ -1,6 +1,7 @@
 from groq import Groq
-from app.settings import settings
+
 from app.log_config import logger
+from app.settings import settings
 
 
 class GroqAdapter:
@@ -53,13 +54,10 @@ class GroqAdapter:
                     # system message sets the AI's behaviour
                     {
                         "role": "system",
-                        "content": "You are a careful data analyst. Answer only using the provided data context."
+                        "content": "You are a careful data analyst. Answer only using the provided data context.",
                     },
                     # user message is the actual prompt from PromptBuilder
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
+                    {"role": "user", "content": prompt},
                 ],
                 temperature=0.2,  # low = focused, factual answers. high = creative, unpredictable
                 max_tokens=1024,  # cap the response length
@@ -68,7 +66,7 @@ class GroqAdapter:
             # Extract the text from Groq's response object
             answer = response.choices[0].message.content
             logger.info("Groq response received successfully")
-            return answer
+            return answer  # type: ignore
 
         except Exception as e:
             # Log the error and raise it so the router (T-127) can

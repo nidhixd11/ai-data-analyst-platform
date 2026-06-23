@@ -1,6 +1,7 @@
 import httpx
-from app.settings import settings
+
 from app.log_config import logger
+from app.settings import settings
 
 
 class OllamaAdapter:
@@ -56,9 +57,7 @@ class OllamaAdapter:
             RuntimeError     → if the request fails for any other reason
         """
         try:
-            logger.info(
-                f"Sending prompt to Ollama | model={self.model} | url={self.generate_url}"
-            )
+            logger.info(f"Sending prompt to Ollama | model={self.model} | url={self.generate_url}")
 
             # Send a plain HTTP POST request — no SDK needed
             # This is exactly like submitting a form on a website
@@ -67,7 +66,7 @@ class OllamaAdapter:
                 json={
                     "model": self.model,
                     "prompt": prompt,
-                    "stream": False,   # give us the full response at once
+                    "stream": False,  # give us the full response at once
                 },
                 timeout=self.timeout,
             )
@@ -83,7 +82,7 @@ class OllamaAdapter:
                 raise RuntimeError("Ollama returned an empty response")
 
             logger.info("Ollama response received successfully")
-            return answer
+            return answer  # type: ignore
 
         except httpx.ConnectError:
             # This happens when Ollama isn't running at all
@@ -92,17 +91,15 @@ class OllamaAdapter:
                 f"Could not connect to Ollama at {self.base_url}. "
                 "Is Docker running? Try: docker compose up ollama"
             )
-            raise ConnectionError(
+            raise ConnectionError(  # noqa: B904
                 f"Ollama is not reachable at {self.base_url}. "
                 "Start Docker and ensure the ollama container is running."
             )
 
         except httpx.TimeoutException:
             # The model took too long to respond
-            logger.error(
-                f"Ollama request timed out after {self.timeout}s | model={self.model}"
-            )
-            raise RuntimeError(
+            logger.error(f"Ollama request timed out after {self.timeout}s | model={self.model}")
+            raise RuntimeError(  # noqa: B904
                 f"Ollama timed out after {self.timeout} seconds. "
                 "Try a smaller model or simplify the prompt."
             )

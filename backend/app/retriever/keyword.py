@@ -1,5 +1,5 @@
 import re
-from typing import List, Dict, Any
+from typing import Any
 
 
 class KeywordRetriever:
@@ -20,7 +20,7 @@ class KeywordRetriever:
         """
         self.top_k = top_k
 
-    def extract_keywords(self, question: str, columns: List[str]) -> List[str]:
+    def extract_keywords(self, question: str, columns: list[str]) -> list[str]:
         """
         Scans the user's question for words that match column names.
 
@@ -35,13 +35,13 @@ class KeywordRetriever:
         matched = []
         for col in columns:
             # Use word boundary matching so "date" doesn't match "update"
-            pattern = r'\b' + re.escape(col.lower()) + r'\b'
+            pattern = r"\b" + re.escape(col.lower()) + r"\b"
             if re.search(pattern, question_lower):
                 matched.append(col)
 
         return matched
 
-    def score_chunk(self, chunk: Dict[str, Any], keywords: List[str]) -> float:
+    def score_chunk(self, chunk: dict[str, Any], keywords: list[str]) -> float:
         """
         Scores a single chunk based on how many matched keywords it contains.
 
@@ -54,8 +54,7 @@ class KeywordRetriever:
             → both "sales" and "region" are in columns → score = 2
         """
         score = 0
-        chunk_columns = [c.lower()
-                         for c in chunk.get("metadata", {}).get("columns", [])]
+        chunk_columns = [c.lower() for c in chunk.get("metadata", {}).get("columns", [])]
         chunk_text = chunk.get("text", "").lower()
 
         for keyword in keywords:
@@ -65,16 +64,13 @@ class KeywordRetriever:
                 score += 1
             # Weaker signal — keyword just appears somewhere in the text
             elif keyword_lower in chunk_text:
-                score += 0.5
+                score += 0.5  # type: ignore
 
         return score
 
     def retrieve(
-        self,
-        question: str,
-        chunks: List[Dict[str, Any]],
-        columns: List[str]
-    ) -> List[Dict[str, Any]]:
+        self, question: str, chunks: list[dict[str, Any]], columns: list[str]
+    ) -> list[dict[str, Any]]:
         """
         Main method — call this to get relevant chunks for a question.
 
@@ -96,7 +92,7 @@ class KeywordRetriever:
         # Step 2 — if no keywords matched, return the first top_k chunks as fallback
         # (better to return something than nothing)
         if not keywords:
-            return chunks[:self.top_k]
+            return chunks[: self.top_k]
 
         # Step 3 — score every chunk
         scored = []
@@ -109,7 +105,7 @@ class KeywordRetriever:
         scored.sort(key=lambda x: x["_score"], reverse=True)
 
         # Step 5 — return only the top_k results
-        return scored[:self.top_k]
+        return scored[: self.top_k]
 
 
 # Shared instance — same pattern as session_store

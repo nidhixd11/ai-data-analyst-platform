@@ -109,6 +109,7 @@ function App() {
           <ChatPanel
             // Keying by session id resets local chat input/state when switching.
             key={activeSession.id}
+            sessionId={activeSession.id}
             initialPrompt={pendingPrompt}
             onInitialPromptConsumed={() => setPendingPrompt(undefined)}
             messages={activeSession.messages}

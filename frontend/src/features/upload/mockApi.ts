@@ -1,70 +1,70 @@
 /**
- * Mock /upload endpoint.
- *
- * Returns the same shape the real backend will return once T-111 ships.
- * Lets us build the dashboard / chat screens before the real API exists.
+ * Real /upload and /chat endpoints.
+ * Calls http://localhost:8000 backend instead of mocking.
  */
+
+export interface ColumnDetail {
+  name: string;
+  type: string;
+  nulls: number;
+}
 
 export interface UploadResponse {
   session_id: string;
   detected_format: "csv" | "xlsx" | "xls";
-  schema: {
-    rows: number;
-    columns: number;
-    columns_detail: ColumnDetail[];
-  };
+  rows: number;
+  columns: number;
+  null_percentage: number;
+  memory_mb: number;
+  schema: ColumnDetail[];
   preview: Record<string, unknown>[];
+  insights: string[];
 }
 
-export interface ColumnDetail {
-  name: string;
-  dtype: "int" | "float" | "string" | "datetime" | "bool";
-  null_pct: number;
+export interface ChatRequest {
+  session_id: string;
+  model_id: string;
+  question: string;
+}
+
+export interface ChatResponse {
+  answer: string;
+  context_used: string[];
+  suggested_chart: string | null;
 }
 
 /**
- * Fake the /upload call.
- * Resolves after a short delay with a believable response based on the file.
+ * Upload a file to the real backend.
  */
 export async function mockUpload(file: File): Promise<UploadResponse> {
-  // Pretend the server is doing work.
-  await delay(1200);
+  const formData = new FormData();
+  formData.append("file", file);
 
-  const ext = file.name.toLowerCase().split(".").pop() ?? "csv";
-  const detected_format =
-    ext === "xlsx" ? "xlsx" : ext === "xls" ? "xls" : "csv";
+  const response = await fetch("http://localhost:8000/upload", {
+    method: "POST",
+    body: formData,
+  });
 
-  return {
-    session_id: cryptoRandomId(),
-    detected_format,
-    schema: {
-      rows: 12_438,
-      columns: 14,
-      columns_detail: [
-        { name: "order_id", dtype: "int", null_pct: 0 },
-        { name: "customer_name", dtype: "string", null_pct: 0.3 },
-        { name: "order_date", dtype: "datetime", null_pct: 0 },
-        { name: "region", dtype: "string", null_pct: 1.2 },
-        { name: "revenue", dtype: "float", null_pct: 0 },
-        { name: "is_returning", dtype: "bool", null_pct: 4.5 },
-      ],
-    },
-    preview: [
-      { order_id: 1001, customer_name: "Aanya Sharma", revenue: 1240.5 },
-      { order_id: 1002, customer_name: "Rohit Kapoor", revenue: 890.0 },
-      { order_id: 1003, customer_name: "Lina Park", revenue: 2150.75 },
-    ],
-  };
-}
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function cryptoRandomId(): string {
-  // Browsers have crypto.randomUUID; fallback for older environments.
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return crypto.randomUUID();
+  if (!response.ok) {
+    throw new Error(`Upload failed: ${response.statusText}`);
   }
-  return Math.random().toString(36).slice(2, 12);
+
+  return response.json();
+}
+
+/**
+ * Send a chat message to the real backend.
+ */
+export async function mockChat(req: ChatRequest): Promise<ChatResponse> {
+  const response = await fetch("http://localhost:8000/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(req),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Chat failed: ${response.statusText}`);
+  }
+
+  return response.json();
 }

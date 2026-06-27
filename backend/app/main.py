@@ -1,30 +1,42 @@
 """
 FastAPI application entrypoint for the Data Insights Chatbot.
-
-This module defines the FastAPI app, registers middleware (CORS),
-and exposes the /health endpoint used by uptime monitors and CI
-smoke tests.
-
-Run locally with:
-    uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-
-The --reload flag restarts the server on every file save (dev only).
+Handles CSV/Excel upload, in-memory RAG, and routes questions to LLMs.
 """
 
 from __future__ import annotations
 
-from fastapi import FastAPI
+import tempfile
+import uuid
+from pathlib import Path
+
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from app.logging import setup_logging
-from app.middleware import RequestIDMiddleware
 
+from app.chunking.chunker import DatasetChunker
+from app.gateway.router import ModelRouter
+from app.ingestion.parser import DatasetProfiler
+from app.insights.generator import AutoInsightGenerator
+from app.log_config import setup_logging
+from app.middleware import RequestIDMiddleware
+from app.schema.summary import SchemaSummaryBuilder
 from app.settings import settings
 
+# Logging
 # ----------------------------------------------------------------------------
+# Must be called before the app is created so that even startup errors
+# are captured in the structured format.
+
+setup_logging()
+
+# Logging
+# Must be called before the app is created so that even startup errors
+# are captured in the structured format.
+setup_logging()
+
+# ============================================================================
 # App
 # ----------------------------------------------------------------------------
-
 
 app = FastAPI(
     title="Data Insights Chatbot API",
@@ -36,14 +48,13 @@ app = FastAPI(
     version=settings.app_version,
 )
 
-setup_logging()
-app.add_middleware(RequestIDMiddleware)
-
 # ----------------------------------------------------------------------------
 # CORS middleware
 # ----------------------------------------------------------------------------
 # Origins come from settings.cors_origins (parsed from CORS_ORIGINS env var).
 # This lets us add prod origins later without touching code.
+
+app.add_middleware(RequestIDMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
@@ -53,21 +64,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ============================================================================
+# In-memory session store
+# ============================================================================
+sessions: dict[str, dict] = {}
 
-# ----------------------------------------------------------------------------
+
+# ============================================================================
 # /health endpoint
-# ----------------------------------------------------------------------------
-
-
+# ============================================================================
 class HealthResponse(BaseModel):
-    """Schema for the /health endpoint response.
-
-    Using a Pydantic model (instead of returning a raw dict) gives us:
-    - Automatic JSON schema in /docs
-    - Response validation: FastAPI guarantees the response shape
-    - Type-safe consumers (e.g., generated TypeScript clients)
-    """
-
     status: str
     service: str
     version: str
@@ -79,12 +85,6 @@ class HealthResponse(BaseModel):
     response_model=HealthResponse,
     tags=["meta"],
     summary="Liveness check",
-    description=(
-        "Returns 200 OK with the service name, version, and environment. "
-        "Used by uptime monitors and CI smoke tests. Does not check "
-        "downstream dependencies (Ollama, Groq, etc) — that's a "
-        "future /readiness endpoint."
-    ),
 )
 def health() -> HealthResponse:
     """Liveness check: the process is up and serving requests."""
@@ -93,4 +93,200 @@ def health() -> HealthResponse:
         service=settings.app_name,
         version=settings.app_version,
         environment=settings.environment,
+    )
+
+
+# ============================================================================
+# /upload endpoint (real implementation)
+# ============================================================================
+class ColumnDetail(BaseModel):
+    name: str
+    type: str
+    null_pct: float
+
+
+class SchemaInfo(BaseModel):
+    rows: int
+    columns: int
+    columns_detail: list[ColumnDetail]
+
+
+class UploadResponse(BaseModel):
+    session_id: str
+    detected_format: str
+    schema: SchemaInfo  # type: ignore
+    preview: list[dict]
+    insights: list[str]
+
+
+@app.post(
+    "/upload",
+    response_model=UploadResponse,
+    tags=["ingestion"],
+    summary="Upload and parse CSV/Excel file",
+)
+async def upload(file: UploadFile = File(...)) -> UploadResponse:
+    """
+    Upload CSV or Excel file. Parse, profile, chunk, and generate insights.
+    Store in session and return metadata.
+    """
+    import pandas as pd
+
+    # Validate file type
+    if not file.filename:
+        raise ValueError("File must have a name")
+
+    ext = file.filename.lower().split(".")[-1]
+    if ext not in ["csv", "xlsx", "xls"]:
+        raise ValueError(f"Unsupported file type: {ext}")
+
+    detected_format = "xlsx" if ext == "xlsx" else "xls" if ext == "xls" else "csv"
+
+    # Save file temporarily
+    with tempfile.NamedTemporaryFile(delete=False, suffix=f".{ext}") as tmp:
+        content = await file.read()
+        tmp.write(content)
+        tmp_path = tmp.name
+
+    try:
+        # Parse the file
+        profiler = DatasetProfiler()
+        profile = profiler.profile(tmp_path)
+
+        # Read dataframe
+        df = pd.read_csv(tmp_path) if tmp_path.endswith(".csv") else pd.read_excel(tmp_path)
+
+        # Build schema summary
+        summary_builder = SchemaSummaryBuilder()
+        summary = summary_builder.build(df)
+
+        # Generate chunks
+        chunker = DatasetChunker()
+        chunks = chunker.chunk(df, window_size=10)
+
+        # Generate insights
+        insight_gen = AutoInsightGenerator()
+        insights = insight_gen.generate(summary)
+
+        # Build schema detail for response
+        schema_detail = [
+            ColumnDetail(
+                name=col["name"],
+                type=col["dtype"],
+                null_pct=col["null_percent"],
+            )
+            for col in summary.get("schema", [])
+        ]
+
+        # Create preview (first 5 rows)
+        preview = df.head(5).to_dict(orient="records")
+
+        # Create session
+        session_id = str(uuid.uuid4())
+        sessions[session_id] = {
+            "dataframe": df,
+            "profile": profile,
+            "summary": summary,
+            "chunks": chunks,
+            "detected_format": detected_format,
+        }
+
+        return UploadResponse(
+            session_id=session_id,
+            detected_format=detected_format,
+            schema=SchemaInfo(
+                rows=len(df),
+                columns=len(df.columns),
+                columns_detail=schema_detail,
+            ),
+            preview=preview,
+            insights=insights,
+        )
+    finally:
+        # Clean up temp file
+        Path(tmp_path).unlink()
+
+
+# ============================================================================
+# /chat endpoint (stub for now)
+# ============================================================================
+class ChatRequest(BaseModel):
+    session_id: str
+    model_id: str
+    question: str
+
+
+class Citation(BaseModel):
+    chunk_id: int
+    chunk_text: str
+    source_rows: list[int]
+    relevance_score: float
+
+
+class ChatResponse(BaseModel):
+    answer: str
+    context_used: list[str]
+    citations: list[Citation]
+    suggested_chart: str | None
+
+
+# Initialize router (at module level, once)
+router = ModelRouter()
+
+
+@app.post(
+    "/chat",
+    response_model=ChatResponse,
+    tags=["chat"],
+    summary="Ask a question about the file",
+)
+async def chat(req: ChatRequest) -> ChatResponse:
+    """
+    Ask a natural-language question. Routes to LLM provider.
+    Returns answer + citations of chunks used.
+    """
+    # Get the session
+    session = sessions.get(req.session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    # Get chunks for citations
+    chunks = session.get("chunks", [])
+    citations = [
+        Citation(
+            chunk_id=i,
+            chunk_text=chunk.get("text", "")[:100],
+            source_rows=chunk.get("row_indices", []),
+            relevance_score=0.85,
+        )
+        for i, chunk in enumerate(chunks[:3])
+    ]
+
+    # Build prompt with schema + context
+    schema_summary = session.get("summary", {})
+    context_text = "\n".join([c.chunk_text for c in citations])
+
+    prompt = f"""You are a careful data analyst. Answer only using the uploaded data.
+
+Schema:
+{str(schema_summary)[:500]}
+
+Context:
+{context_text}
+
+Question: {req.question}
+
+Answer concisely. Say 'insufficient data' if you can't answer."""
+
+    # Route to LLM
+    try:
+        answer = router.route(req.model_id, prompt)  # type: ignore
+    except Exception as e:
+        answer = f"Error calling LLM: {str(e)}"
+
+    return ChatResponse(
+        answer=answer,
+        context_used=[c.chunk_text for c in citations],
+        citations=citations,
+        suggested_chart="bar",
     )

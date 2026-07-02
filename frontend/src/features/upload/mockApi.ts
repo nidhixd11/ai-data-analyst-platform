@@ -5,18 +5,20 @@
 
 export interface ColumnDetail {
   name: string;
-  type: string;
-  nulls: number;
+  dtype: "int" | "float" | "string" | "datetime" | "bool";
+  null_pct: number;
 }
 
 export interface UploadResponse {
   session_id: string;
   detected_format: "csv" | "xlsx" | "xls";
-  rows: number;
-  columns: number;
   null_percentage: number;
   memory_mb: number;
-  schema: ColumnDetail[];
+  schema: {
+    rows: number;
+    columns: number;
+    columns_detail: ColumnDetail[];
+  };
   preview: Record<string, unknown>[];
   insights: string[];
 }
@@ -36,11 +38,13 @@ export interface ChatResponse {
 /**
  * Upload a file to the real backend.
  */
+const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+
 export async function mockUpload(file: File): Promise<UploadResponse> {
   const formData = new FormData();
   formData.append("file", file);
 
-  const response = await fetch("http://localhost:8000/upload", {
+  const response = await fetch(`${API_URL}/upload`, {
     method: "POST",
     body: formData,
   });

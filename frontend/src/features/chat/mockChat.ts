@@ -1,5 +1,7 @@
 import { getMockContext, type MessageContext } from "./mockContext";
 
+const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+
 export interface ChatMessage {
   id: string;
   role: "user" | "assistant";
@@ -23,7 +25,7 @@ export async function mockChatReply(
 ): Promise<ChatResponse> {
   const startTime = Date.now();
 
-  const response = await fetch("http://localhost:8000/chat", {
+  const response = await fetch(`${API_URL}/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({

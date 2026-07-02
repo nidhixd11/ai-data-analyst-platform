@@ -37,9 +37,11 @@ export default function ChatPanel({
 
   useEffect(() => {
     if (initialPrompt) {
-      setInput(initialPrompt);
-      textareaRef.current?.focus();
-      onInitialPromptConsumed?.();
+      setTimeout(() => {
+        setInput(initialPrompt);
+        textareaRef.current?.focus();
+        onInitialPromptConsumed?.();
+      }, 0);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialPrompt]);

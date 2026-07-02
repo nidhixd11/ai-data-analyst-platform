@@ -63,3 +63,4 @@ numpy
 google-generativeai
 faiss-cpu
 groq==1.5.0
+ruff

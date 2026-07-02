@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, type KeyboardEvent } from "react";
 import ChatMessage from "./ChatMessage";
-import ModelPicker, { type ModelId } from "./ModelPicker";
+import ModelPicker from "./ModelPicker";
+import type { ModelId } from "./modelConfig";
 import ContextDrawer from "./ContextDrawer";
 import { mockChatReply, type ChatMessage as ChatMessageType } from "./mockChat";
 import type { MessageContext } from "./mockContext";

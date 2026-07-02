@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import List
-
 import google.generativeai as genai
 
 from app.settings import settings
@@ -16,7 +14,7 @@ class GeminiEmbedder:
                 api_key=settings.gemini_api_key.get_secret_value()
             )
 
-    def embed(self, texts: List[str]) -> List[List[float]]:
+    def embed(self, texts: list[str]) -> list[list[float]]:
         """
         Generate embeddings for text chunks.
         """

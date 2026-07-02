@@ -1,5 +1,4 @@
-from typing import List, Dict, Any, Optional
-
+from typing import Any
 
 # This is the exact template from your design document.
 # The {placeholders} get replaced with real data at runtime.
@@ -38,7 +37,7 @@ class PromptBuilder:
     And combines them into one clean, structured prompt string.
     """
 
-    def _format_schema(self, schema_summary: Dict[str, Any]) -> str:
+    def _format_schema(self, schema_summary: dict[str, Any]) -> str:
         """
         Converts the schema dictionary into readable text for the LLM.
 
@@ -82,7 +81,7 @@ class PromptBuilder:
 
         return "\n".join(lines) if lines else "No schema available."
 
-    def _format_chunks(self, chunks: List[Dict[str, Any]]) -> str:
+    def _format_chunks(self, chunks: list[dict[str, Any]]) -> str:
         """
         Converts retrieved chunks into readable text for the LLM.
 
@@ -104,7 +103,7 @@ class PromptBuilder:
 
         return "\n".join(formatted) if formatted else "No relevant context found."
 
-    def _format_history(self, chat_history: List[Dict[str, str]]) -> str:
+    def _format_history(self, chat_history: list[dict[str, str]]) -> str:
         """
         Converts the conversation history into readable text for the LLM.
 
@@ -133,9 +132,9 @@ class PromptBuilder:
     def build(
         self,
         user_question: str,
-        schema_summary: Dict[str, Any],
-        retrieved_chunks: List[Dict[str, Any]],
-        chat_history: Optional[List[Dict[str, str]]] = None,
+        schema_summary: dict[str, Any],
+        retrieved_chunks: list[dict[str, Any]],
+        chat_history: list[dict[str, str]] | None = None,
     ) -> str:
         """
         Main method — call this to get the final prompt string.

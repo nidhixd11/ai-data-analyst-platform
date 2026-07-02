@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Layout from "./components/Layout";
 import RightRail from "./components/RightRail";
 import UploadZone from "./features/upload/UploadZone";
@@ -20,24 +20,17 @@ import type { UploadResponse } from "./features/upload/mockApi";
 import type { ChatMessage } from "./features/chat/mockChat";
 
 function App() {
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [activeSessionId, setActiveSessionIdState] = useState<string | null>(
-    null,
-  );
   const [pendingPrompt, setPendingPrompt] = useState<string | undefined>(
     undefined,
   );
 
   // Load saved sessions + last active session on first mount.
-  useEffect(() => {
+  const [sessions, setSessions] = useState<Session[]>(() => loadSessions());
+  const [activeSessionId, setActiveSessionIdState] = useState<string | null>(() => {
     const stored = loadSessions();
-    setSessions(stored);
     const lastActive = loadActiveSessionId();
-    // Only restore if the id still exists in the stored list.
-    if (lastActive && stored.some((s) => s.id === lastActive)) {
-      setActiveSessionIdState(lastActive);
-    }
-  }, []);
+    return lastActive && stored.some((s) => s.id === lastActive) ? lastActive : null;
+  });
 
   /** Wrapped setter that also persists the active id. */
   function setActiveSession(id: string | null) {

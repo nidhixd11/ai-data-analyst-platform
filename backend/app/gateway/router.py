@@ -3,12 +3,12 @@ LLM Router: Routes requests to appropriate provider with fallback logic.
 Providers tried in order: groq → gemini → ollama
 """
 
-from typing import Optional
+
 from app.gateway.base import LLMProvider
 from app.gateway.groq_adapter import groq_adapter
 from app.gateway.ollama_adapter import ollama_adapter
-from app.settings import settings
 from app.log_config import logger
+from app.settings import settings
 
 # Safe import for Gemini — may not be merged yet (teammate's T-125)
 try:
@@ -26,7 +26,7 @@ class ModelRouter:
 
     def __init__(self):
         # Registry — maps model_id strings to adapter instances
-        self.providers: dict[str, Optional[LLMProvider]] = {
+        self.providers: dict[str, LLMProvider | None] = {
             "groq": groq_adapter,
             "ollama": ollama_adapter,
             "gemini": gemini_adapter,
@@ -34,13 +34,13 @@ class ModelRouter:
 
         # Fallback chain — order matters
         # Groq first (fastest), Gemini second (free cloud), Ollama last (local only)
-        self.fallback_chain: list[tuple[str, Optional[LLMProvider]]] = [
+        self.fallback_chain: list[tuple[str, LLMProvider | None]] = [
             ("groq", groq_adapter),
             ("gemini", gemini_adapter),
             ("ollama", ollama_adapter),
         ]
 
-    def route(self, prompt: str, model_id: Optional[str] = None) -> str:
+    def route(self, prompt: str, model_id: str | None = None) -> str:
         """
         Route prompt to specified model with fallback.
 

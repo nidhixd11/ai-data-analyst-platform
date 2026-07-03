@@ -1,0 +1,19 @@
+name: Production Deploy
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  approve-and-deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Trigger backend prod deploy
+        run: |
+          curl -X POST "${{ secrets.RENDER_PROD_BACKEND_HOOK }}"
+
+      - name: Trigger frontend prod deploy
+        run: |
+          curl -X POST "${{ secrets.RENDER_PROD_FRONTEND_HOOK }}"

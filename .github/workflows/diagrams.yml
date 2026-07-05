@@ -1,0 +1,38 @@
+name: Render Diagrams
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - 'docs/diagrams/**.mmd'
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Mermaid CLI
+        run: npm install -g @mermaid-js/mermaid-cli
+
+      - name: Render MMD files to PNG
+        run: |
+          for file in docs/diagrams/*.mmd; do
+            output="${file%.mmd}.png"
+            mmdc -i "$file" -o "$output"
+            echo "Rendered $file → $output"
+          done
+
+      - name: Commit rendered PNGs
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/diagrams/*.png
+          git diff --staged --quiet || git commit -m "ci: render mermaid diagrams to PNG"
+          git push

@@ -101,7 +101,7 @@ def health() -> HealthResponse:
 # ============================================================================
 class ColumnDetail(BaseModel):
     name: str
-    type: str
+    dtype: str
     null_pct: float
 
 
@@ -154,7 +154,8 @@ async def upload(file: UploadFile = File(...)) -> UploadResponse:
         profile = profiler.profile(tmp_path)
 
         # Read dataframe
-        df = pd.read_csv(tmp_path) if tmp_path.endswith(".csv") else pd.read_excel(tmp_path)
+        df = pd.read_csv(tmp_path) if tmp_path.endswith(
+            ".csv") else pd.read_excel(tmp_path)
 
         # Build schema summary
         summary_builder = SchemaSummaryBuilder()
@@ -169,10 +170,25 @@ async def upload(file: UploadFile = File(...)) -> UploadResponse:
         insights = insight_gen.generate(summary)
 
         # Build schema detail for response
+       # Build schema detail for response
+        dtype_map = {
+            "int": ["int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "uint64"],
+            "float": ["float16", "float32", "float64"],
+            "bool": ["bool"],
+            "datetime": ["datetime64", "datetime64[ns]"],
+        }
+
+        def normalise_dtype(raw: str) -> str:
+            raw = raw.lower()
+            for target, variants in dtype_map.items():
+                if any(raw.startswith(v) for v in variants):
+                    return target
+            return "string"
+
         schema_detail = [
             ColumnDetail(
                 name=col["name"],
-                type=col["dtype"],
+                dtype=normalise_dtype(col["dtype"]),
                 null_pct=col["null_percent"],
             )
             for col in summary.get("schema", [])

@@ -1,0 +1,27 @@
+name: Smoke Tests
+
+on:
+  push:
+    branches:
+      - release/**
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - run: npm ci
+
+      - run: npx playwright install --with-deps chromium
+
+      - run: npx playwright test --config=playwright.smoke.config.ts
+        env:
+          BASE_URL: ${{ secrets.PREPROD_FRONTEND_URL }}

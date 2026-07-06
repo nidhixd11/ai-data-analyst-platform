@@ -9,18 +9,39 @@ export interface ColumnDetail {
   null_pct: number;
 }
 
+export interface ColumnStatistics {
+  dtype: string;
+
+  count: number;
+  null_count: number;
+
+  mean: number | null;
+  median: number | null;
+  minimum: number | null;
+  maximum: number | null;
+  std: number | null;
+}
+
 export interface UploadResponse {
   session_id: string;
   detected_format: "csv" | "xlsx" | "xls";
-  null_percentage: number;
+
   memory_mb: number;
+  null_percentage: number;
+  duplicate_rows: number;
+  numeric_columns: number;
+
   schema: {
     rows: number;
     columns: number;
     columns_detail: ColumnDetail[];
   };
+
   preview: Record<string, unknown>[];
+
   insights: string[];
+
+  column_statistics: Record<string, ColumnStatistics>;
 }
 
 export interface ChatRequest {

@@ -4,6 +4,8 @@ Handles CSV/Excel upload, in-memory RAG, and routes questions to LLMs.
 """
 
 from __future__ import annotations
+from app.analytics.chart_generator import ChartGenerator
+from app.schema.chart import ChartConfig
 
 import tempfile
 import uuid
@@ -11,7 +13,9 @@ from pathlib import Path
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from typing import Any
+
 
 from app.chunking.chunker import DatasetChunker
 from app.gateway.router import ModelRouter
@@ -138,6 +142,7 @@ class UploadResponse(BaseModel):
     numeric_columns: int
 
     column_statistics: dict[str, ColumnStatistics]
+    charts: list[ChartConfig] = Field(default_factory=list)
 
 
 @app.post(
@@ -177,6 +182,13 @@ async def upload(file: UploadFile = File(...)) -> UploadResponse:
         # Read dataframe
         df = pd.read_csv(tmp_path) if tmp_path.endswith(
             ".csv") else pd.read_excel(tmp_path)
+
+        for column in df.columns:
+            if "date" in column.lower() or "time" in column.lower():
+                try:
+                    df[column] = pd.to_datetime(df[column])
+                except Exception:
+                    pass
 
         # Build schema summary
         summary_builder = SchemaSummaryBuilder()
@@ -235,14 +247,6 @@ async def upload(file: UploadFile = File(...)) -> UploadResponse:
         )
 
         # Statistics for every numeric column
-        column_statistics = {}
-
-        numeric_df = df.select_dtypes(include=["number"])
-
-        for column in numeric_df.columns:
-            series = numeric_df[column]
-
-        # Statistics for every numeric column
         column_statistics: dict[str, ColumnStatistics] = {}
 
         numeric_df = df.select_dtypes(include=["number"])
@@ -273,6 +277,9 @@ async def upload(file: UploadFile = File(...)) -> UploadResponse:
             "detected_format": detected_format,
         }
 
+        chart_generator = ChartGenerator()
+        charts = chart_generator.generate(df)
+
         return UploadResponse(
             session_id=session_id,
             detected_format=detected_format,
@@ -282,6 +289,7 @@ async def upload(file: UploadFile = File(...)) -> UploadResponse:
                 columns_detail=schema_detail,
             ),
             preview=preview,
+            charts=charts,
             insights=insights,
 
             memory_mb=memory_mb,

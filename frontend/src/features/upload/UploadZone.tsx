@@ -33,6 +33,7 @@ export default function UploadZone({ onUploadComplete }: UploadZoneProps) {
     setState({ kind: "uploading", file });
     try {
       const response = await mockUpload(file);
+      console.log(response);
       setState({ kind: "ready", file, result: response });
       onUploadComplete?.(response, file);
     } catch {

@@ -22,6 +22,14 @@ export interface ColumnStatistics {
   std: number | null;
 }
 
+export interface ChartConfig {
+  title: string;
+  chart_type: "bar" | "line" | "scatter" | "histogram";
+  x_axis: string;
+  y_axis: string;
+  data: Record<string, unknown>[];
+}
+
 export interface UploadResponse {
   session_id: string;
   detected_format: "csv" | "xlsx" | "xls";
@@ -42,6 +50,8 @@ export interface UploadResponse {
   insights: string[];
 
   column_statistics: Record<string, ColumnStatistics>;
+
+  charts: ChartConfig[];
 }
 
 export interface ChatRequest {

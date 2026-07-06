@@ -40,7 +40,7 @@ export default function Dashboard({
       </div>
 
       <InsightSummary result={result} />
-      <TrendChart />
+      <TrendChart chart={result.charts?.[0]} />
 
       <section className="flex flex-col gap-3">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">

@@ -86,7 +86,7 @@ export default function InsightSummary({ result }: InsightSummaryProps) {
       <div className="border-t border-[var(--color-border)] px-5 py-4">
         <h4 className="mb-3 font-medium">Numeric Column Statistics</h4>
 
-        {Object.keys(result.column_statistics).length > 0 ? (
+        {/*Object.keys(result.column_statistics).length > 0 ? (
           Object.entries(result.column_statistics).map(([name, stats]) => (
             <div
               key={name}
@@ -108,7 +108,7 @@ export default function InsightSummary({ result }: InsightSummaryProps) {
           <p className="text-sm text-[var(--color-text-muted)]">
             No numeric columns found.
           </p>
-        )}
+        )*/}
       </div>
 
       <div className="border-t border-[var(--color-border)] px-5 py-4">

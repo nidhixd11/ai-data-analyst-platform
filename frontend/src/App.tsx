@@ -84,7 +84,12 @@ function App() {
           onNewSession={handleNewSession}
         />
       }
-      rightRail={<RightRail hasActiveData={activeSession !== null} />}
+      rightRail={
+        <RightRail
+          hasActiveData={activeSession !== null}
+          result={activeSession?.result}
+        />
+      }
     >
       {activeSession === null ? (
         <div className="flex h-full flex-col items-center justify-center gap-10 py-12">

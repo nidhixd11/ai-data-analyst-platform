@@ -1,6 +1,6 @@
 from pandas.api.types import (
-    is_numeric_dtype,
     is_datetime64_any_dtype,
+    is_numeric_dtype,
 )
 
 from app.schema.chart import ChartConfig
@@ -30,11 +30,36 @@ class ChartGenerator:
             else:
                 categorical_cols.append(col)
 
+        # ----------------------------------
+        # Choose the best numeric column
+        # ----------------------------------
+
+        preferred = [
+            "revenue",
+            "sales",
+            "profit",
+            "amount",
+            "price",
+            "salary",
+            "marks",
+            "temperature",
+        ]
+
+        selected_numeric = numeric_cols[0] if numeric_cols else None
+
+        for col in numeric_cols:
+            if any(word in col.lower() for word in preferred):
+                selected_numeric = col
+                break
+
         # ---------------------------------------------------
         # RULE 1
         # Datetime + Numeric = Line Chart
         # ---------------------------------------------------
         if datetime_cols and numeric_cols:
+
+            if selected_numeric is None:
+                return charts
 
             x = datetime_cols[0]
             y = numeric_cols[0]
@@ -85,8 +110,11 @@ class ChartGenerator:
         # ---------------------------------------------------
         if categorical_cols and numeric_cols:
 
+            if selected_numeric is None:
+                return charts
+
             x = categorical_cols[0]
-            y = numeric_cols[0]
+            y = selected_numeric
 
             grouped = (
                 df.groupby(x)[y]

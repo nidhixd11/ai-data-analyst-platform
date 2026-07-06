@@ -4,9 +4,8 @@ Handles CSV/Excel upload, in-memory RAG, and routes questions to LLMs.
 """
 
 from __future__ import annotations
-from app.analytics.chart_generator import ChartGenerator
-from app.schema.chart import ChartConfig
 
+import contextlib
 import tempfile
 import uuid
 from pathlib import Path
@@ -14,24 +13,16 @@ from pathlib import Path
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-from typing import Any
 
-
+from app.analytics.chart_generator import ChartGenerator
 from app.chunking.chunker import DatasetChunker
 from app.gateway.router import ModelRouter
 from app.ingestion.parser import DatasetProfiler
-from app.insights.generator import AutoInsightGenerator
 from app.log_config import setup_logging
 from app.middleware import RequestIDMiddleware
+from app.schema.chart import ChartConfig
 from app.schema.summary import SchemaSummaryBuilder
 from app.settings import settings
-
-# Logging
-# ----------------------------------------------------------------------------
-# Must be called before the app is created so that even startup errors
-# are captured in the structured format.
-
-setup_logging()
 
 # Logging
 # Must be called before the app is created so that even startup errors
@@ -184,11 +175,8 @@ async def upload(file: UploadFile = File(...)) -> UploadResponse:
             ".csv") else pd.read_excel(tmp_path)
 
         for column in df.columns:
-            if "date" in column.lower() or "time" in column.lower():
-                try:
-                    df[column] = pd.to_datetime(df[column])
-                except Exception:
-                    pass
+            with contextlib.suppress(Exception):
+                df[column] = pd.to_datetime(df[column])
 
         # Build schema summary
         summary_builder = SchemaSummaryBuilder()
@@ -198,11 +186,6 @@ async def upload(file: UploadFile = File(...)) -> UploadResponse:
         chunker = DatasetChunker()
         chunks = chunker.chunk(df, window_size=10)
 
-        # Generate insights
-        insight_gen = AutoInsightGenerator()
-        insights = insight_gen.generate(summary)
-
-        # Build schema detail for response
        # Build schema detail for response
         dtype_map = {
             "int": ["int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "uint64"],
@@ -254,18 +237,18 @@ async def upload(file: UploadFile = File(...)) -> UploadResponse:
         for column in numeric_df.columns:
             series = numeric_df[column]
 
-        column_statistics[column] = ColumnStatistics(
-            dtype=str(series.dtype),
+            column_statistics[column] = ColumnStatistics(
+                dtype=str(series.dtype),
 
-            count=int(series.count()),
-            null_count=int(series.isnull().sum()),
+                count=int(series.count()),
+                null_count=int(series.isnull().sum()),
 
-            mean=float(series.mean()),
-            median=float(series.median()),
-            minimum=float(series.min()),
-            maximum=float(series.max()),
-            std=float(series.std()) if series.count() > 1 else 0.0,
-        )
+                mean=float(series.mean()) if series.count() else None,
+                median=float(series.median()),
+                minimum=float(series.min()),
+                maximum=float(series.max()),
+                std=float(series.std()) if series.count() > 1 else 0.0,
+            )
 
         # Create session
         session_id = str(uuid.uuid4())
@@ -279,6 +262,32 @@ async def upload(file: UploadFile = File(...)) -> UploadResponse:
 
         chart_generator = ChartGenerator()
         charts = chart_generator.generate(df)
+
+        insights = []
+
+        insights.append(
+            f"Dataset contains {len(df)} rows and {len(df.columns)} columns."
+        )
+
+        if duplicate_rows == 0:
+            insights.append("No duplicate rows detected.")
+        else:
+            insights.append(f"{duplicate_rows} duplicate rows detected.")
+
+        if null_percentage == 0:
+            insights.append("No missing values detected.")
+        else:
+            insights.append(f"{null_percentage:.1f}% missing values detected.")
+
+        insights.append(
+            f"{numeric_columns} numeric columns identified."
+        )
+
+        for column, stats in column_statistics.items():
+            insights.append(
+                f"{column} ranges from {stats.minimum:.2f} to {stats.maximum:.2f} "
+                f"with an average of {stats.mean:.2f}."
+            )
 
         return UploadResponse(
             session_id=session_id,

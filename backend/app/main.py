@@ -111,12 +111,33 @@ class SchemaInfo(BaseModel):
     columns_detail: list[ColumnDetail]
 
 
+class ColumnStatistics(BaseModel):
+    dtype: str
+
+    count: int
+    null_count: int
+
+    mean: float | None = None
+    median: float | None = None
+    minimum: float | None = None
+    maximum: float | None = None
+    std: float | None = None
+
+
 class UploadResponse(BaseModel):
     session_id: str
     detected_format: str
-    schema: SchemaInfo  # type: ignore
+    schema: SchemaInfo
     preview: list[dict]
     insights: list[str]
+
+    # Dataset statistics
+    memory_mb: float
+    null_percentage: float
+    duplicate_rows: int
+    numeric_columns: int
+
+    column_statistics: dict[str, ColumnStatistics]
 
 
 @app.post(
@@ -197,6 +218,51 @@ async def upload(file: UploadFile = File(...)) -> UploadResponse:
         # Create preview (first 5 rows)
         preview = df.head(5).to_dict(orient="records")
 
+        # Dataset statistics
+        memory_mb = float(df.memory_usage(deep=True).sum() / (1024 * 1024))
+
+        total_cells = df.shape[0] * df.shape[1]
+        null_percentage = (
+            float(df.isnull().sum().sum() / total_cells * 100)
+            if total_cells > 0
+            else 0.0
+        )
+
+        duplicate_rows = int(df.duplicated().sum())
+
+        numeric_columns = int(
+            df.select_dtypes(include=["number"]).shape[1]
+        )
+
+        # Statistics for every numeric column
+        column_statistics = {}
+
+        numeric_df = df.select_dtypes(include=["number"])
+
+        for column in numeric_df.columns:
+            series = numeric_df[column]
+
+        # Statistics for every numeric column
+        column_statistics: dict[str, ColumnStatistics] = {}
+
+        numeric_df = df.select_dtypes(include=["number"])
+
+        for column in numeric_df.columns:
+            series = numeric_df[column]
+
+        column_statistics[column] = ColumnStatistics(
+            dtype=str(series.dtype),
+
+            count=int(series.count()),
+            null_count=int(series.isnull().sum()),
+
+            mean=float(series.mean()),
+            median=float(series.median()),
+            minimum=float(series.min()),
+            maximum=float(series.max()),
+            std=float(series.std()) if series.count() > 1 else 0.0,
+        )
+
         # Create session
         session_id = str(uuid.uuid4())
         sessions[session_id] = {
@@ -217,6 +283,12 @@ async def upload(file: UploadFile = File(...)) -> UploadResponse:
             ),
             preview=preview,
             insights=insights,
+
+            memory_mb=memory_mb,
+            null_percentage=null_percentage,
+            duplicate_rows=duplicate_rows,
+            numeric_columns=numeric_columns,
+            column_statistics=column_statistics
         )
     finally:
         # Clean up temp file

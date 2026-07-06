@@ -4,73 +4,127 @@ interface InsightSummaryProps {
   result: UploadResponse;
 }
 
-/**
- * "Live Insight Summary" card — AI-generated analysis preview.
- * Status tags on the right indicate freshness and any flagged areas.
- *
- * For now the body text is mocked; real insights come from the LLM
- * once T-121 (auto-insight generator) is wired in.
- */
 export default function InsightSummary({ result }: InsightSummaryProps) {
-  // Mock primary stat from the response — the LLM will replace this later.
-  const mockStats = {
-    totalRevenue: "$4.28M",
-    momGrowth: "18.2%",
-    forecastDeviation: "-1.4%",
-    liftPct: "4.2%",
-  };
+  const numericColumns = result.schema.columns_detail.filter(
+    (c) => c.dtype === "int" || c.dtype === "float"
+  ).length;
+
+  const categoricalColumns =
+    result.schema.columns_detail.length - numericColumns;
 
   return (
     <article className="overflow-hidden rounded-2xl border-l-4 border-l-[var(--color-accent)] bg-[var(--color-surface)] shadow-sm">
-      <div className="flex flex-col items-start gap-3 border-b border-[var(--color-border)] px-5 py-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-        <div className="flex items-center gap-2">
-          <SparkIcon />
-          <h3 className="text-base font-semibold tracking-tight">
-            Live Insight Summary
-          </h3>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <StatusTag tone="success" label="Live" dot />
-          <StatusTag tone="warning" label="APAC Volatility" />
-        </div>
-      </div>
+      <div className="flex items-center justify-between border-b border-[var(--color-border)] px-5 py-4">
+        <h3 className="text-base font-semibold tracking-tight">
+          AI Dataset Summary
+        </h3>
 
-      <div className="grid grid-cols-1 gap-4 px-5 py-5 sm:grid-cols-3">
-        <Metric
-          label="Total Revenue"
-          value={mockStats.totalRevenue}
-          delta="+12.4% vs prev."
-          deltaTone="success"
-        />
-        <Metric
-          label="MoM Growth"
-          value={mockStats.momGrowth}
-          delta="Above target"
-          deltaTone="accent"
-        />
-        <Metric
-          label="Forecast Deviation"
-          value={mockStats.forecastDeviation}
-          delta="High Precision"
-          deltaTone="muted"
-        />
-      </div>
-
-      <p className="border-t border-[var(--color-border)] px-5 py-4 text-sm leading-relaxed text-[var(--color-text)]">
-        Based on the latest data ingested from{" "}
-        <span className="font-medium text-[var(--color-accent)]">
-          {result.detected_format.toUpperCase()} file
+        <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-700">
+          {result.detected_format.toUpperCase()}
         </span>
-        , we observe a significant uptick in subscription renewals across the NA
-        sector, while the APAC region shows anomalous volatility in early Q3.
-        Predictive modelling suggests a{" "}
-        <span className="font-semibold">{mockStats.liftPct} lift</span> if the
-        current trend maintains.
-      </p>
+      </div>
 
-      <div className="flex items-center gap-2 border-t border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-text-muted)_4%,transparent)] px-5 py-3">
-        <ActionButton label="Default Insight" icon={<DotIcon />} />
-        <ActionButton label="Next Action" icon={<ArrowIcon />} />
+      <div className="grid grid-cols-2 gap-4 px-5 py-5 md:grid-cols-4">
+        <Metric
+          label="Rows"
+          value={result.schema.rows.toLocaleString()}
+        />
+
+        <Metric
+          label="Columns"
+          value={result.schema.columns.toString()}
+        />
+
+        <Metric
+          label="Detected Format"
+          value={result.detected_format.toUpperCase()}
+        />
+
+        <Metric
+          label="Preview Records"
+          value={result.preview.length.toString()}
+        />
+      </div>
+
+      <div className="border-t border-[var(--color-border)] px-5 py-4">
+        <h4 className="mb-3 font-medium">Schema Overview</h4>
+
+        <div className="mb-4 flex gap-6 text-sm">
+          <span>
+            <strong>Numeric:</strong> {numericColumns}
+          </span>
+
+          <span>
+            <strong>Categorical:</strong> {categoricalColumns}
+          </span>
+        </div>
+
+        <table className="w-full text-left text-sm">
+          <thead className="border-b border-[var(--color-border)]">
+            <tr>
+              <th className="py-2">Column</th>
+              <th>Type</th>
+              <th>Null %</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {result.schema.columns_detail.map((column) => (
+              <tr
+                key={column.name}
+                className="border-b border-[var(--color-border)]"
+              >
+                <td className="py-2">{column.name}</td>
+                <td>{column.dtype}</td>
+                <td>{column.null_pct}%</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="border-t border-[var(--color-border)] px-5 py-4">
+        <h4 className="mb-3 font-medium">Numeric Column Statistics</h4>
+
+        {Object.keys(result.column_statistics).length > 0 ? (
+          Object.entries(result.column_statistics).map(([name, stats]) => (
+            <div
+              key={name}
+              className="mb-4 rounded-lg border border-[var(--color-border)] p-3"
+            >
+              <h5 className="mb-2 font-medium">{name}</h5>
+
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <span>Mean: {stats.mean?.toFixed(2)}</span>
+                <span>Median: {stats.median}</span>
+                <span>Minimum: {stats.minimum}</span>
+                <span>Maximum: {stats.maximum}</span>
+                <span>Std Dev: {stats.std?.toFixed(2)}</span>
+                <span>Count: {stats.count}</span>
+              </div>
+            </div>
+          ))
+        ) : (
+          <p className="text-sm text-[var(--color-text-muted)]">
+            No numeric columns found.
+          </p>
+        )}
+      </div>
+
+      <div className="border-t border-[var(--color-border)] px-5 py-4">
+        <h4 className="mb-2 font-medium">AI Analyst Insights</h4>
+
+        {result.insights.length > 0 ? (
+          <ul className="list-disc space-y-1 pl-5 text-sm">
+            {result.insights.map((insight, index) => (
+              <li key={index}>{insight}</li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-[var(--color-text-muted)]">
+            No AI insights generated yet. Upload analysis completed successfully.
+          </p>
+        )}
       </div>
     </article>
   );
@@ -79,121 +133,19 @@ export default function InsightSummary({ result }: InsightSummaryProps) {
 function Metric({
   label,
   value,
-  delta,
-  deltaTone,
 }: {
   label: string;
   value: string;
-  delta: string;
-  deltaTone: "success" | "accent" | "muted";
 }) {
-  const toneColor = {
-    success: "#10B981",
-    accent: "var(--color-accent)",
-    muted: "var(--color-text-muted)",
-  }[deltaTone];
-
   return (
-    <div className="rounded-xl border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-text-muted)_4%,transparent)] px-4 py-3">
-      <p className="text-xs font-medium text-[var(--color-text-muted)]">
+    <div className="rounded-xl border border-[var(--color-border)] p-4">
+      <p className="text-xs text-[var(--color-text-muted)]">
         {label}
       </p>
-      <p className="mt-1 text-2xl font-semibold tracking-tight tabular-nums">
+
+      <p className="mt-1 text-2xl font-semibold">
         {value}
       </p>
-      <p className="mt-1 text-xs font-medium" style={{ color: toneColor }}>
-        {delta}
-      </p>
     </div>
-  );
-}
-
-function StatusTag({
-  tone,
-  label,
-  dot = false,
-}: {
-  tone: "success" | "warning";
-  label: string;
-  dot?: boolean;
-}) {
-  const palette = {
-    success: {
-      fg: "#10B981",
-      bg: "color-mix(in oklab, #10B981 14%, transparent)",
-    },
-    warning: {
-      fg: "#F59E0B",
-      bg: "color-mix(in oklab, #F59E0B 14%, transparent)",
-    },
-  }[tone];
-
-  return (
-    <span
-      className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium"
-      style={{ color: palette.fg, backgroundColor: palette.bg }}
-    >
-      {dot && (
-        <span
-          className="h-1.5 w-1.5 rounded-full"
-          style={{ backgroundColor: palette.fg }}
-        />
-      )}
-      {label}
-    </span>
-  );
-}
-
-function ActionButton({
-  label,
-  icon,
-}: {
-  label: string;
-  icon: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-medium text-[var(--color-text)] transition hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]"
-    >
-      {icon}
-      {label}
-    </button>
-  );
-}
-
-function SparkIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-4 w-4 text-[var(--color-accent)]"
-    >
-      <path d="M12 3l2.3 5.2L20 10l-4.5 3.2L17 19l-5-3-5 3 1.5-5.8L4 10l5.7-1.8L12 3z" />
-    </svg>
-  );
-}
-
-function DotIcon() {
-  return <span className="inline-block h-1.5 w-1.5 rounded-full bg-current" />;
-}
-
-function ArrowIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-3 w-3"
-    >
-      <polygon points="5 3 19 12 5 21 5 3" />
-    </svg>
   );
 }

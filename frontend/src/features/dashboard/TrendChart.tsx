@@ -12,7 +12,7 @@ import {
   Tooltip,
 } from "recharts";
 
-import type { ChartConfig } from "../types"; // <-- adjust this import path if needed
+import type { ChartConfig } from "../../types"; // <-- adjust this import path if needed
 
 interface Props {
   chart?: ChartConfig;

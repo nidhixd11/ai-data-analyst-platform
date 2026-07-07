@@ -29,7 +29,7 @@ function Header() {
       <div className="flex items-center gap-2">
         <div className="h-6 w-6 rounded-md bg-[var(--color-accent)]" />
         <span className="text-sm font-semibold tracking-tight">
-          <span className="hidden sm:inline">Data Insights Chatbot</span>
+          <span className="hidden sm:inline">Data Analyst Platform</span>
           <span className="sm:hidden">Insights</span>
         </span>
       </div>

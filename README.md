@@ -1,4 +1,4 @@
-# Data Insights Chatbot — Phase 1
+# Data Analyst Platform — Phase 1
 
 A lean, in-memory RAG prototype that turns any CSV or Excel upload into instant insights and natural-language Q&A.
 

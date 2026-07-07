@@ -1,6 +1,6 @@
 # Contributing
 
-Welcome! This is the playbook for working on the Data Insights Chatbot. Read it before opening your first PR.
+Welcome! This is the playbook for working on the Data Analyst Platform. Read it before opening your first PR.
 ## Branch model
 
 We use three long-lived branches and short-lived feature branches.

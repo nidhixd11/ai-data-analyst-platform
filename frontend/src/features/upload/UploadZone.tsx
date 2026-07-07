@@ -189,7 +189,7 @@ function UploadContent({
         Drop your CSV or Excel file to get started
       </p>
       <p className="max-w-sm text-sm text-[var(--color-text-muted)]">
-        Data Insights Chatbot will analyse, clean, and visualise your data in
+        Data Analyst Platform will analyse, clean, and visualise your data in
         seconds.
       </p>
       <button

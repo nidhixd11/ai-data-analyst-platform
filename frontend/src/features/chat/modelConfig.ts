@@ -1,5 +1,4 @@
-
-export type ModelId = "groq" | "gemini" | "chatgpt" | "ollama";
+export type ModelId = "groq" | "gemini" | "ollama";
 
 export interface ModelOption {
   id: ModelId;
@@ -20,12 +19,6 @@ export const MODELS: ModelOption[] = [
     id: "gemini",
     label: "Gemini",
     description: "Google's multimodal model",
-    badge: "cloud",
-  },
-  {
-    id: "chatgpt",
-    label: "ChatGPT",
-    description: "OpenAI GPT-4",
     badge: "cloud",
   },
   {

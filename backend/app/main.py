@@ -4,9 +4,9 @@ Handles CSV/Excel upload, in-memory RAG, and routes questions to LLMs.
 """
 
 from __future__ import annotations
-import re
 
 import contextlib
+import re
 import tempfile
 import uuid
 from pathlib import Path
@@ -23,8 +23,8 @@ from app.log_config import setup_logging
 from app.middleware import RequestIDMiddleware
 from app.schema.chart import ChartConfig
 from app.schema.summary import SchemaSummaryBuilder
-from app.settings import settings
 from app.session_store import SessionStore
+from app.settings import settings
 
 # Logging
 # Must be called before the app is created so that even startup errors

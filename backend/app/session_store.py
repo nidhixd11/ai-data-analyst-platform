@@ -10,6 +10,7 @@ swap this for an external store (Postgres, Redis, S3) behind the same
 get/set/delete interface.
 """
 from __future__ import annotations
+
 import pickle
 import tempfile
 from pathlib import Path

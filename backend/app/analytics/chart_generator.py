@@ -6,6 +6,11 @@ from pandas.api.types import (
 from app.schema.chart import ChartConfig
 
 
+def _format_label(name: str) -> str:
+    """Turn snake_case/raw column names into Title Case for display."""
+    return " ".join(word.capitalize() for word in name.replace("_", " ").split())
+
+
 class ChartGenerator:
 
     def generate(self, df):
@@ -71,7 +76,7 @@ class ChartGenerator:
 
             charts.append(
                 ChartConfig(
-                    title=f"{y} over {x}",
+                    title=f"{_format_label(y)} over {_format_label(x)}",
                     chart_type="line",
                     x_axis=x,
                     y_axis=y,
@@ -94,7 +99,7 @@ class ChartGenerator:
 
             charts.append(
                 ChartConfig(
-                    title=f"{y} vs {x}",
+                    title=f"{_format_label(y)} vs {_format_label(x)}",
                     chart_type="scatter",
                     x_axis=x,
                     y_axis=y,
@@ -124,7 +129,7 @@ class ChartGenerator:
 
             charts.append(
                 ChartConfig(
-                    title=f"Average {y} by {x}",
+                    title=f"Average {_format_label(y)} by {_format_label(x)}",
                     chart_type="bar",
                     x_axis=x,
                     y_axis=y,
@@ -146,7 +151,7 @@ class ChartGenerator:
 
             charts.append(
                 ChartConfig(
-                    title=f"Distribution of {col}",
+                    title=f"Distribution of {_format_label(col)}",
                     chart_type="histogram",
                     x_axis=col,
                     y_axis="Frequency",

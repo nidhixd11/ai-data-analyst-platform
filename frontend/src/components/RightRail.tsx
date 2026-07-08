@@ -1,4 +1,7 @@
-import type { UploadResponse, ColumnStatistics } from "../features/upload/mockApi.ts";
+import type {
+  UploadResponse,
+  ColumnStatistics,
+} from "../features/upload/mockApi.ts";
 import type { Session } from "../features/sessions/sessionStorage";
 
 interface RightRailProps {
@@ -9,8 +12,33 @@ interface RightRailProps {
 }
 
 // Business column keyword detection
-const REVENUE_KEYWORDS = ["revenue", "sales", "profit", "amount", "price", "income", "earnings", "turnover", "salary", "cost", "spend", "budget"];
-const CATEGORY_KEYWORDS = ["region", "category", "department", "product", "segment", "type", "country", "city", "team", "channel", "brand"];
+const REVENUE_KEYWORDS = [
+  "revenue",
+  "sales",
+  "profit",
+  "amount",
+  "price",
+  "income",
+  "earnings",
+  "turnover",
+  "salary",
+  "cost",
+  "spend",
+  "budget",
+];
+const CATEGORY_KEYWORDS = [
+  "region",
+  "category",
+  "department",
+  "product",
+  "segment",
+  "type",
+  "country",
+  "city",
+  "team",
+  "channel",
+  "brand",
+];
 
 function detectColumns(result: UploadResponse) {
   const columns = result.schema.columns_detail;
@@ -18,13 +46,13 @@ function detectColumns(result: UploadResponse) {
   const revenueColumns = columns.filter(
     (c) =>
       (c.dtype === "int" || c.dtype === "float") &&
-      REVENUE_KEYWORDS.some((k) => c.name.toLowerCase().includes(k))
+      REVENUE_KEYWORDS.some((k) => c.name.toLowerCase().includes(k)),
   );
 
   const categoryColumns = columns.filter(
     (c) =>
       c.dtype === "string" &&
-      CATEGORY_KEYWORDS.some((k) => c.name.toLowerCase().includes(k))
+      CATEGORY_KEYWORDS.some((k) => c.name.toLowerCase().includes(k)),
   );
 
   const isBusinessDataset = revenueColumns.length > 0;
@@ -40,7 +68,11 @@ export default function RightRail({
 }: RightRailProps) {
   if (hasActiveData && result) {
     return (
-      <ActiveRail result={result} sessions={sessions} onSelectSession={onSelectSession} />
+      <ActiveRail
+        result={result}
+        sessions={sessions}
+        onSelectSession={onSelectSession}
+      />
     );
   }
   return <EmptyRail />;
@@ -55,7 +87,8 @@ function ActiveRail({
   sessions: Session[];
   onSelectSession: (id: string) => void;
 }) {
-  const { revenueColumns, categoryColumns, isBusinessDataset } = detectColumns(result);
+  const { revenueColumns, categoryColumns, isBusinessDataset } =
+    detectColumns(result);
   const uniqueFiles = dedupeByFilename(sessions);
 
   return (
@@ -80,7 +113,7 @@ function ActiveRail({
             value={
               result.null_percentage === 0
                 ? "None detected"
-                : `${result.null_percentage.toFixed(1)}%`
+                : `${result.null_percentage?.toFixed(1) ?? "N/A"}%`
             }
           />
           <HealthRow
@@ -90,14 +123,14 @@ function ActiveRail({
             value={
               result.duplicate_rows === 0
                 ? "None detected"
-                : result.duplicate_rows.toString()
+                : (result.duplicate_rows?.toString() ?? "N/A")
             }
           />
           <HealthRow
             label="Memory Usage"
             ok={result.memory_mb < 50}
             warn={result.memory_mb >= 50 && result.memory_mb < 100}
-            value={`${result.memory_mb.toFixed(2)} MB`}
+            value={`${result.memory_mb?.toFixed(2) ?? "N/A"}`}
           />
         </div>
       </Card>
@@ -316,16 +349,28 @@ function CategoryDistribution({
 /* ─── Generic Dataset Rail ─── */
 
 function GenericRail({ result }: { result: UploadResponse }) {
-  const hasStats = Object.keys(result.column_statistics).length > 0;
+  const hasStats = Object.keys(result.column_statistics || {}).length > 0;
 
   return (
     <>
       <Card label="Dataset Overview">
         <div className="space-y-2.5 text-sm">
-          <OverviewRow label="Rows" value={result.schema.rows.toLocaleString()} />
-          <OverviewRow label="Columns" value={result.schema.columns.toString()} />
-          <OverviewRow label="Memory" value={`${result.memory_mb.toFixed(2)} MB`} />
-          <OverviewRow label="Numeric Columns" value={result.numeric_columns.toString()} />
+          <OverviewRow
+            label="Rows"
+            value={result.schema.rows.toLocaleString()}
+          />
+          <OverviewRow
+            label="Columns"
+            value={result.schema.columns.toString()}
+          />
+          <OverviewRow
+            label="Memory"
+            value={`${result.memory_mb?.toFixed(2) ?? "N/A"} MB`}
+          />
+          <OverviewRow
+            label="Numeric Columns"
+            value={result.numeric_columns?.toString() ?? "N/A"}
+          />
         </div>
       </Card>
 
@@ -410,7 +455,11 @@ function HealthRow({
   ok: boolean;
   warn: boolean;
 }) {
-  const color = ok ? "text-green-600" : warn ? "text-yellow-600" : "text-red-500";
+  const color = ok
+    ? "text-green-600"
+    : warn
+      ? "text-yellow-600"
+      : "text-red-500";
   const icon = ok ? "✓" : warn ? "⚠" : "✗";
 
   return (
@@ -423,7 +472,13 @@ function HealthRow({
   );
 }
 
-function Card({ label, children }: { label: string; children: React.ReactNode }) {
+function Card({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
     <section className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
       <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">

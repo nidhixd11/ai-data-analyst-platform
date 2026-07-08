@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Layout from "./components/Layout";
 import RightRail from "./components/RightRail";
+import LandingPage from "./components/Landingpage";
 import UploadZone from "./features/upload/UploadZone";
 import SuggestionPills from "./features/upload/SuggestionPills";
 import Dashboard from "./features/dashboard/Dashboard";
@@ -20,17 +21,23 @@ import type { UploadResponse } from "./features/upload/mockApi";
 import type { ChatMessage } from "./features/chat/mockChat";
 
 function App() {
+  const [showLanding, setShowLanding] = useState(true);
   const [pendingPrompt, setPendingPrompt] = useState<string | undefined>(
     undefined,
   );
   const [rightRailOpen, setRightRailOpen] = useState(true);
+
   // Load saved sessions + last active session on first mount.
   const [sessions, setSessions] = useState<Session[]>(() => loadSessions());
-  const [activeSessionId, setActiveSessionIdState] = useState<string | null>(() => {
-    const stored = loadSessions();
-    const lastActive = loadActiveSessionId();
-    return lastActive && stored.some((s) => s.id === lastActive) ? lastActive : null;
-  });
+  const [activeSessionId, setActiveSessionIdState] = useState<string | null>(
+    () => {
+      const stored = loadSessions();
+      const lastActive = loadActiveSessionId();
+      return lastActive && stored.some((s) => s.id === lastActive)
+        ? lastActive
+        : null;
+    },
+  );
 
   /** Wrapped setter that also persists the active id. */
   function setActiveSession(id: string | null) {
@@ -71,6 +78,10 @@ function App() {
   function handleMessagesChange(messages: ChatMessage[]) {
     if (!activeSessionId) return;
     setSessions((prev) => updateSession(prev, activeSessionId, { messages }));
+  }
+
+  if (showLanding) {
+    return <LandingPage onStart={() => setShowLanding(false)} />;
   }
 
   return (

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import Layout from "./components/Layout";
 import RightRail from "./components/RightRail";
+import LandingPage from "./components/Landingpage";
 import UploadZone from "./features/upload/UploadZone";
 import SuggestionPills from "./features/upload/SuggestionPills";
 import Dashboard from "./features/dashboard/Dashboard";
@@ -20,6 +21,7 @@ import type { UploadResponse } from "./features/upload/mockApi";
 import type { ChatMessage } from "./features/chat/mockChat";
 
 function App() {
+  const [showLanding, setShowLanding] = useState(true);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [activeSessionId, setActiveSessionIdState] = useState<string | null>(
     null,
@@ -79,6 +81,14 @@ function App() {
     if (!activeSessionId) return;
     setSessions((prev) => updateSession(prev, activeSessionId, { messages }));
   }
+
+  if (showLanding) {
+  return (
+    <LandingPage
+      onStart={() => setShowLanding(false)}
+    />
+  );
+}
 
   return (
     <Layout

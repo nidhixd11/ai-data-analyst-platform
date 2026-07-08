@@ -174,25 +174,8 @@ export default function TrendChart({ chart }: Props) {
     </article>
   );
 }
-function formatColumnName(name: string): string {
-  return name
-    .split(/[_\s]+/)
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
-}
 
-function formatChartTitle(title: string): string {
-  // Titles come as raw "y vs x" / "Average y by x" strings built from
-  // snake_case column names — reformat each word for display.
-  return title
-    .split(" ")
-    .map((word) =>
-      ["vs", "by", "over", "of"].includes(word.toLowerCase())
-        ? word.toLowerCase()
-        : formatColumnName(word)
-    )
-    .join(" ");
-}
+
 function TypeButton({
   label,
   active,

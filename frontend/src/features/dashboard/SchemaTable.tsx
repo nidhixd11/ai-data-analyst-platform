@@ -43,7 +43,7 @@ export default function SchemaTable({ columns }: SchemaTableProps) {
                   <DtypeBadge dtype={col.dtype} />
                 </td>
                 <td className="px-4 py-3 text-right tabular-nums">
-                  {col.null_pct.toFixed(1)}%
+                  {col.null_pct?.toFixed(1) ?? "—"}%
                 </td>
               </tr>
             ))}

@@ -9,8 +9,10 @@ interface SessionsSidebarProps {
 }
 
 /**
- * Left sidebar listing past upload sessions.
- * Click a session to restore it; trash icon deletes.
+ * Left sidebar: brand header, new-chat action, nav rail, recent chats,
+ * and a user footer. Nav items beyond "Chat" are placeholders until
+ * those views exist as separate routes. Uploaded files list lives in
+ * the right rail instead of here (see RightRail.tsx).
  * On mobile this collapses behind a toggle (handled in Layout).
  */
 export default function SessionsSidebar({
@@ -22,25 +24,42 @@ export default function SessionsSidebar({
 }: SessionsSidebarProps) {
   return (
     <aside className="hidden w-64 shrink-0 flex-col border-r border-[var(--color-border)] bg-[var(--color-surface)] lg:flex">
-      <header className="flex items-center justify-between border-b border-[var(--color-border)] px-4 py-3">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
-          Sessions
-        </h2>
+      {/* Brand */}
+      <div className="flex items-center gap-2 border-b border-[var(--color-border)] px-4 py-3.5">
+        <div className="h-6 w-6 rounded-md bg-[var(--color-accent)]" />
+        <span className="text-sm font-semibold tracking-tight">
+          Data Analyst Platform
+        </span>
+      </div>
+
+      {/* New chat */}
+      <div className="px-3 pt-3">
         <button
           type="button"
           onClick={onNewSession}
-          title="New session"
-          className="flex h-7 w-7 items-center justify-center rounded-md text-[var(--color-text-muted)] transition hover:bg-[color-mix(in_oklab,var(--color-accent)_12%,transparent)] hover:text-[var(--color-accent)]"
+          className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 text-sm font-medium text-[var(--color-text)] transition hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]"
         >
           <PlusIcon />
+          New Chat
         </button>
-      </header>
+      </div>
 
-      <div className="flex-1 overflow-y-auto">
+      {/* Nav rail */}
+      <nav className="flex flex-col gap-0.5 px-3 py-3">
+        <NavItem icon={<GridIcon />} label="Dashboard" />
+        <NavItem icon={<ChatIcon />} label="Chat" active />
+        <NavItem icon={<FolderIcon />} label="Files" />
+        <NavItem icon={<ChartIcon />} label="Charts" />
+        <NavItem icon={<HistoryIcon />} label="History" />
+      </nav>
+
+      <div className="flex-1 overflow-y-auto px-1 pb-3">
+        {/* Recent chats */}
+        <SectionLabel>Recent Chats</SectionLabel>
         {sessions.length === 0 ? (
-          <EmptyState />
+          <EmptyState text="Your chats will appear here." />
         ) : (
-          <ul className="flex flex-col gap-1 p-2">
+          <ul className="flex flex-col gap-1 px-2">
             {sessions.map((session) => (
               <li key={session.id}>
                 <SessionRow
@@ -54,7 +73,49 @@ export default function SessionsSidebar({
           </ul>
         )}
       </div>
+
+      {/* User footer */}
+      <div className="flex items-center gap-2 border-t border-[var(--color-border)] px-4 py-3">
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-border)] text-[var(--color-text-muted)]">
+          <UserIcon />
+        </div>
+        <span className="text-sm font-medium text-[var(--color-text)]">User</span>
+      </div>
     </aside>
+  );
+}
+
+function NavItem({
+  icon,
+  label,
+  active = false,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  active?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={!active}
+      className={[
+        "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition",
+        active
+          ? "bg-[color-mix(in_oklab,var(--color-accent)_12%,transparent)] text-[var(--color-accent)]"
+          : "cursor-default text-[var(--color-text-muted)] opacity-50",
+      ].join(" ")}
+    >
+      {icon}
+      {label}
+    </button>
+  );
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <h2 className="px-3 pb-1.5 pt-4 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)] first:pt-0">
+      {children}
+    </h2>
   );
 }
 
@@ -120,15 +181,13 @@ function SessionRow({
   );
 }
 
-function EmptyState() {
+function EmptyState({ text }: { text: string }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-2 px-4 py-8 text-center">
+    <div className="flex flex-col items-center justify-center gap-2 px-4 py-6 text-center">
       <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[color-mix(in_oklab,var(--color-text-muted)_12%,transparent)]">
         <ClockIcon />
       </div>
-      <p className="text-xs text-[var(--color-text-muted)]">
-        Your uploaded files will appear here.
-      </p>
+      <p className="text-xs text-[var(--color-text-muted)]">{text}</p>
     </div>
   );
 }
@@ -217,6 +276,70 @@ function ClockIcon() {
     >
       <circle cx="12" cy="12" r="10" />
       <polyline points="12 6 12 12 16 14" />
+    </svg>
+  );
+}
+
+function UserIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-4 w-4"
+    >
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6" />
+    </svg>
+  );
+}
+
+function GridIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+      <rect x="3" y="3" width="7" height="7" rx="1" />
+      <rect x="14" y="3" width="7" height="7" rx="1" />
+      <rect x="3" y="14" width="7" height="7" rx="1" />
+      <rect x="14" y="14" width="7" height="7" rx="1" />
+    </svg>
+  );
+}
+
+function ChatIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    </svg>
+  );
+}
+
+function FolderIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+    </svg>
+  );
+}
+
+function ChartIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+      <line x1="18" y1="20" x2="18" y2="10" />
+      <line x1="12" y1="20" x2="12" y2="4" />
+      <line x1="6" y1="20" x2="6" y2="14" />
+    </svg>
+  );
+}
+
+function HistoryIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+      <path d="M3 12a9 9 0 1 0 2.6-6.3" />
+      <path d="M3 5v5h5" />
+      <polyline points="12 7 12 12 15 14" />
     </svg>
   );
 }

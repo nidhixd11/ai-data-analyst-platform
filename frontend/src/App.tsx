@@ -23,7 +23,7 @@ function App() {
   const [pendingPrompt, setPendingPrompt] = useState<string | undefined>(
     undefined,
   );
-
+  const [rightRailOpen, setRightRailOpen] = useState(true);
   // Load saved sessions + last active session on first mount.
   const [sessions, setSessions] = useState<Session[]>(() => loadSessions());
   const [activeSessionId, setActiveSessionIdState] = useState<string | null>(() => {
@@ -88,8 +88,12 @@ function App() {
         <RightRail
           hasActiveData={activeSession !== null}
           result={activeSession?.result}
+          sessions={sessions}
+          onSelectSession={handleSelectSession}
         />
       }
+      rightRailOpen={rightRailOpen}
+      onToggleRightRail={() => setRightRailOpen((v) => !v)}
     >
       {activeSession === null ? (
         <div className="flex h-full flex-col items-center justify-center gap-10 py-12">

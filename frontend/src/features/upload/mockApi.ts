@@ -33,24 +33,19 @@ export interface ChartConfig {
 export interface UploadResponse {
   session_id: string;
   detected_format: "csv" | "xlsx" | "xls";
-
+  ai_summary: string;
   memory_mb: number;
   null_percentage: number;
   duplicate_rows: number;
   numeric_columns: number;
-
   schema: {
     rows: number;
     columns: number;
     columns_detail: ColumnDetail[];
   };
-
   preview: Record<string, unknown>[];
-
   insights: string[];
-
   column_statistics: Record<string, ColumnStatistics>;
-
   charts: ChartConfig[];
 }
 
@@ -91,7 +86,7 @@ export async function mockUpload(file: File): Promise<UploadResponse> {
  * Send a chat message to the real backend.
  */
 export async function mockChat(req: ChatRequest): Promise<ChatResponse> {
-  const response = await fetch("http://localhost:8000/chat", {
+  const response = await fetch(`${API_URL}/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(req),

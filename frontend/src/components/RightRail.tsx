@@ -1,23 +1,437 @@
-
-import type { UploadResponse } from "../features/upload/mockApi.ts";
+import type { UploadResponse, ColumnStatistics } from "../features/upload/mockApi.ts";
+import type { Session } from "../features/sessions/sessionStorage";
 
 interface RightRailProps {
   hasActiveData: boolean;
   result?: UploadResponse;
+  sessions: Session[];
+  onSelectSession: (id: string) => void;
 }
 
-/**
- * Right-hand rail. Shows an empty state until a file is uploaded;
- * after upload it shows insight summary cards (T-133 Part 2B).
- */
+// Business column keyword detection
+const REVENUE_KEYWORDS = ["revenue", "sales", "profit", "amount", "price", "income", "earnings", "turnover", "salary", "cost", "spend", "budget"];
+const CATEGORY_KEYWORDS = ["region", "category", "department", "product", "segment", "type", "country", "city", "team", "channel", "brand"];
+
+function detectColumns(result: UploadResponse) {
+  const columns = result.schema.columns_detail;
+
+  const revenueColumns = columns.filter(
+    (c) =>
+      (c.dtype === "int" || c.dtype === "float") &&
+      REVENUE_KEYWORDS.some((k) => c.name.toLowerCase().includes(k))
+  );
+
+  const categoryColumns = columns.filter(
+    (c) =>
+      c.dtype === "string" &&
+      CATEGORY_KEYWORDS.some((k) => c.name.toLowerCase().includes(k))
+  );
+
+  const isBusinessDataset = revenueColumns.length > 0;
+
+  return { revenueColumns, categoryColumns, isBusinessDataset };
+}
+
 export default function RightRail({
   hasActiveData,
   result,
+  sessions,
+  onSelectSession,
 }: RightRailProps) {
   if (hasActiveData && result) {
-    return <ActiveRail result={result} />;
-  };
+    return (
+      <ActiveRail result={result} sessions={sessions} onSelectSession={onSelectSession} />
+    );
+  }
   return <EmptyRail />;
+}
+
+function ActiveRail({
+  result,
+  sessions,
+  onSelectSession,
+}: {
+  result: UploadResponse;
+  sessions: Session[];
+  onSelectSession: (id: string) => void;
+}) {
+  const { revenueColumns, categoryColumns, isBusinessDataset } = detectColumns(result);
+  const uniqueFiles = dedupeByFilename(sessions);
+
+  return (
+    <aside className="hidden w-72 shrink-0 flex-col gap-4 overflow-auto border-l border-[var(--color-border)] bg-[var(--color-surface)] p-5 lg:flex">
+      {isBusinessDataset ? (
+        <BusinessRail
+          result={result}
+          revenueColumns={revenueColumns.map((c) => c.name)}
+          categoryColumns={categoryColumns.map((c) => c.name)}
+        />
+      ) : (
+        <GenericRail result={result} />
+      )}
+
+      {/* Dataset Health — always shown */}
+      <Card label="Dataset Health">
+        <div className="space-y-2.5">
+          <HealthRow
+            label="Missing Values"
+            ok={result.null_percentage === 0}
+            warn={result.null_percentage > 0 && result.null_percentage < 10}
+            value={
+              result.null_percentage === 0
+                ? "None detected"
+                : `${result.null_percentage.toFixed(1)}%`
+            }
+          />
+          <HealthRow
+            label="Duplicate Rows"
+            ok={result.duplicate_rows === 0}
+            warn={false}
+            value={
+              result.duplicate_rows === 0
+                ? "None detected"
+                : result.duplicate_rows.toString()
+            }
+          />
+          <HealthRow
+            label="Memory Usage"
+            ok={result.memory_mb < 50}
+            warn={result.memory_mb >= 50 && result.memory_mb < 100}
+            value={`${result.memory_mb.toFixed(2)} MB`}
+          />
+        </div>
+      </Card>
+
+      {/* Uploaded Files */}
+      <Card label="Uploaded Files">
+        {uniqueFiles.length === 0 ? (
+          <p className="text-xs text-[var(--color-text-muted)]">
+            Your uploaded files will appear here.
+          </p>
+        ) : (
+          <ul className="flex flex-col gap-0.5">
+            {uniqueFiles.map((session) => (
+              <li key={session.id}>
+                <button
+                  type="button"
+                  onClick={() => onSelectSession(session.id)}
+                  className="flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-left text-xs text-[var(--color-text-muted)] transition hover:bg-[color-mix(in_oklab,var(--color-text-muted)_6%,transparent)] hover:text-[var(--color-text)]"
+                >
+                  <FileIcon />
+                  <span className="truncate" title={session.filename}>
+                    {session.filename}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+    </aside>
+  );
+}
+
+/* ─── Business Dataset Rail ─── */
+
+function BusinessRail({
+  result,
+  revenueColumns,
+  categoryColumns,
+}: {
+  result: UploadResponse;
+  revenueColumns: string[];
+  categoryColumns: string[];
+}) {
+  const rows = result.schema.rows;
+
+  return (
+    <>
+      <Card label="Key Metrics">
+        <div className="space-y-3">
+          {revenueColumns.slice(0, 3).map((colName) => {
+            const stats = result.column_statistics[colName];
+            if (!stats) return null;
+
+            const total = stats.mean !== null ? stats.mean * rows : null;
+
+            return (
+              <KpiBlock
+                key={colName}
+                label={colName}
+                total={total}
+                mean={stats.mean}
+                min={stats.minimum}
+                max={stats.maximum}
+                rows={rows}
+              />
+            );
+          })}
+        </div>
+      </Card>
+
+      {categoryColumns.length > 0 && result.preview.length > 0 && (
+        <Card label="Top Categories">
+          <CategoryDistribution
+            preview={result.preview}
+            categoryCol={categoryColumns[0]}
+            valueCol={revenueColumns[0]}
+          />
+        </Card>
+      )}
+    </>
+  );
+}
+
+function KpiBlock({
+  label,
+  total,
+  mean,
+  min,
+  max,
+  rows,
+}: {
+  label: string;
+  total: number | null;
+  mean: number | null;
+  min: number | null;
+  max: number | null;
+  rows: number;
+}) {
+  const range = max !== null && min !== null ? max - min : null;
+  const meanPosition =
+    range && mean !== null && min !== null && range > 0
+      ? ((mean - min) / range) * 100
+      : null;
+
+  return (
+    <div className="rounded-lg border border-[var(--color-border)] p-3">
+      <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+        {label}
+      </p>
+
+      {total !== null && (
+        <p className="text-xl font-bold tabular-nums">
+          {total >= 1_000_000
+            ? `${(total / 1_000_000).toFixed(2)}M`
+            : total >= 1_000
+              ? `${(total / 1_000).toFixed(1)}K`
+              : total.toFixed(2)}
+          <span className="ml-1 text-xs font-normal text-[var(--color-text-muted)]">
+            est. total
+          </span>
+        </p>
+      )}
+
+      <div className="mt-2 grid grid-cols-3 gap-1 text-center text-xs text-[var(--color-text-muted)]">
+        <div>
+          <p className="font-medium text-[var(--color-text)]">
+            {min?.toFixed(1) ?? "—"}
+          </p>
+          <p>Min</p>
+        </div>
+        <div>
+          <p className="font-medium text-[var(--color-accent)]">
+            {mean?.toFixed(1) ?? "—"}
+          </p>
+          <p>Avg</p>
+        </div>
+        <div>
+          <p className="font-medium text-[var(--color-text)]">
+            {max?.toFixed(1) ?? "—"}
+          </p>
+          <p>Max</p>
+        </div>
+      </div>
+
+      {meanPosition !== null && (
+        <div className="relative mt-2 h-1.5 w-full rounded-full bg-[var(--color-border)]">
+          <div
+            className="absolute top-0 h-1.5 rounded-full bg-[var(--color-accent)] opacity-30"
+            style={{ width: `${meanPosition}%` }}
+          />
+          <div
+            className="absolute top-0 h-1.5 w-1.5 -translate-x-1/2 rounded-full bg-[var(--color-accent)]"
+            style={{ left: `${meanPosition}%` }}
+          />
+        </div>
+      )}
+
+      <p className="mt-1.5 text-right text-xs text-[var(--color-text-muted)]">
+        across {rows.toLocaleString()} rows
+      </p>
+    </div>
+  );
+}
+
+function CategoryDistribution({
+  preview,
+  categoryCol,
+  valueCol,
+}: {
+  preview: Record<string, unknown>[];
+  categoryCol: string;
+  valueCol: string;
+}) {
+  const totals: Record<string, number> = {};
+
+  for (const row of preview) {
+    const cat = String(row[categoryCol] ?? "Unknown");
+    const val = Number(row[valueCol] ?? 0);
+    totals[cat] = (totals[cat] ?? 0) + val;
+  }
+
+  const entries = Object.entries(totals).sort((a, b) => b[1] - a[1]);
+  const grandTotal = entries.reduce((s, [, v]) => s + v, 0);
+
+  if (entries.length === 0) return null;
+
+  return (
+    <div className="space-y-2">
+      <p className="mb-2 text-xs text-[var(--color-text-muted)]">
+        Based on {preview.length} preview rows
+      </p>
+      {entries.slice(0, 5).map(([cat, val]) => {
+        const pct = grandTotal > 0 ? (val / grandTotal) * 100 : 0;
+        return (
+          <div key={cat}>
+            <div className="flex justify-between text-xs mb-1">
+              <span className="font-medium truncate max-w-[120px]">{cat}</span>
+              <span className="tabular-nums text-[var(--color-text-muted)]">
+                {pct.toFixed(1)}%
+              </span>
+            </div>
+            <div className="h-1.5 w-full rounded-full bg-[var(--color-border)]">
+              <div
+                className="h-1.5 rounded-full bg-[var(--color-accent)]"
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ─── Generic Dataset Rail ─── */
+
+function GenericRail({ result }: { result: UploadResponse }) {
+  const hasStats = Object.keys(result.column_statistics).length > 0;
+
+  return (
+    <>
+      <Card label="Dataset Overview">
+        <div className="space-y-2.5 text-sm">
+          <OverviewRow label="Rows" value={result.schema.rows.toLocaleString()} />
+          <OverviewRow label="Columns" value={result.schema.columns.toString()} />
+          <OverviewRow label="Memory" value={`${result.memory_mb.toFixed(2)} MB`} />
+          <OverviewRow label="Numeric Columns" value={result.numeric_columns.toString()} />
+        </div>
+      </Card>
+
+      {hasStats && (
+        <Card label="Column Statistics">
+          <div className="space-y-4">
+            {Object.entries(result.column_statistics).map(([name, stats]) => (
+              <StatBlock key={name} name={name} stats={stats} />
+            ))}
+          </div>
+        </Card>
+      )}
+    </>
+  );
+}
+
+function StatBlock({ name, stats }: { name: string; stats: ColumnStatistics }) {
+  const range =
+    stats.maximum !== null && stats.minimum !== null
+      ? stats.maximum - stats.minimum
+      : null;
+
+  const meanPosition =
+    range && stats.mean !== null && stats.minimum !== null && range > 0
+      ? ((stats.mean - stats.minimum) / range) * 100
+      : null;
+
+  return (
+    <div>
+      <p className="mb-1.5 text-xs font-semibold">{name}</p>
+      <div className="grid grid-cols-3 gap-1 text-center text-xs text-[var(--color-text-muted)]">
+        <div>
+          <p className="font-medium text-[var(--color-text)]">
+            {stats.minimum?.toFixed(1) ?? "—"}
+          </p>
+          <p>Min</p>
+        </div>
+        <div>
+          <p className="font-medium text-[var(--color-accent)]">
+            {stats.mean?.toFixed(1) ?? "—"}
+          </p>
+          <p>Mean</p>
+        </div>
+        <div>
+          <p className="font-medium text-[var(--color-text)]">
+            {stats.maximum?.toFixed(1) ?? "—"}
+          </p>
+          <p>Max</p>
+        </div>
+      </div>
+      {meanPosition !== null && (
+        <div className="relative mt-2 h-1.5 w-full rounded-full bg-[var(--color-border)]">
+          <div
+            className="absolute top-0 h-1.5 w-1.5 -translate-x-1/2 rounded-full bg-[var(--color-accent)]"
+            style={{ left: `${meanPosition}%` }}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Shared components ─── */
+
+function OverviewRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex justify-between">
+      <span className="text-[var(--color-text-muted)]">{label}</span>
+      <span className="font-medium tabular-nums">{value}</span>
+    </div>
+  );
+}
+
+function HealthRow({
+  label,
+  value,
+  ok,
+  warn,
+}: {
+  label: string;
+  value: string;
+  ok: boolean;
+  warn: boolean;
+}) {
+  const color = ok ? "text-green-600" : warn ? "text-yellow-600" : "text-red-500";
+  const icon = ok ? "✓" : warn ? "⚠" : "✗";
+
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-sm text-[var(--color-text-muted)]">{label}</span>
+      <span className={`text-sm font-medium ${color}`}>
+        {icon} {value}
+      </span>
+    </div>
+  );
+}
+
+function Card({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <section className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
+      <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+        {label}
+      </p>
+      {children}
+    </section>
+  );
 }
 
 function EmptyRail() {
@@ -31,128 +445,6 @@ function EmptyRail() {
         Insights will appear here once a file is processed.
       </p>
     </aside>
-  );
-}
-
-function ActiveRail({
-  result,
-}: {
-  result: UploadResponse;
-}) {
-  return (
-    <aside className="hidden w-72 shrink-0 flex-col gap-4 overflow-auto border-l border-[var(--color-border)] bg-[var(--color-surface)] p-5 lg:flex">
-      <Card label="Dataset Overview">
-        <div className="space-y-3 text-sm">
-
-          <div className="flex justify-between">
-            <span>Rows</span>
-            <span>{result.schema.rows}</span>
-          </div>
-
-          <div className="flex justify-between">
-            <span>Columns</span>
-            <span>{result.schema.columns}</span>
-          </div>
-
-          <div className="flex justify-between">
-            <span>Memory Usage</span>
-            <span>{result.memory_mb.toFixed(2)} MB</span>
-          </div>
-
-          <div className="flex justify-between">
-            <span>Missing Values</span>
-            <span>{result.null_percentage.toFixed(1)}%</span>
-          </div>
-
-          <div className="flex justify-between">
-            <span>Duplicate Rows</span>
-            <span>{result.duplicate_rows}</span>
-          </div>
-
-          <div className="flex justify-between">
-            <span>Numeric Columns</span>
-            <span>{result.numeric_columns}</span>
-          </div>
-
-        </div>
-      </Card>
-
-      <Card label="Dataset Health">
-
-        <div className="space-y-3">
-
-          <HealthRow
-            label="Missing Values"
-            ok={result.null_percentage < 5}
-            value={
-              result.null_percentage === 0
-                ? "None detected"
-                : `${result.null_percentage.toFixed(1)}%`
-            }
-          />
-
-          <HealthRow
-            label="Duplicate Rows"
-            ok={result.duplicate_rows === 0}
-            value={
-              result.duplicate_rows === 0
-                ? "None detected"
-                : result.duplicate_rows.toString()
-            }
-          />
-
-          <HealthRow
-            label="Memory Usage"
-            ok={result.memory_mb < 100}
-            value={`${result.memory_mb.toFixed(2)} MB`}
-          />
-
-        </div>
-
-      </Card>
-    </aside>
-  );
-}
-
-
-function HealthRow({
-  label,
-  value,
-  ok,
-}: {
-  label: string;
-  value: string;
-  ok: boolean;
-}) {
-  return (
-    <div className="flex justify-between items-center">
-
-      <span className="text-sm">{label}</span>
-
-      <span
-        className={`font-medium ${ok ? "text-green-600" : "text-yellow-600"
-          }`}
-      >
-        {ok ? "✓" : "⚠"} {value}
-      </span>
-
-    </div>
-  );
-}
-function Card({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
-      <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
-        {label}
-      </p>
-      {children}
-    </section>
   );
 }
 
@@ -176,3 +468,32 @@ function EmptyIcon() {
   );
 }
 
+function FileIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-3.5 w-3.5 shrink-0 text-[var(--color-text-muted)]"
+    >
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+    </svg>
+  );
+}
+
+/** Keep only the most recent session per unique filename. */
+function dedupeByFilename(sessions: Session[]): Session[] {
+  const seen = new Set<string>();
+  const result: Session[] = [];
+  for (const s of sessions) {
+    if (!seen.has(s.filename)) {
+      seen.add(s.filename);
+      result.push(s);
+    }
+  }
+  return result;
+}

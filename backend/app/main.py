@@ -128,6 +128,7 @@ class UploadResponse(BaseModel):
     schema: SchemaInfo
     preview: list[dict]
     insights: list[str]
+    ai_summary: str
 
     # Dataset statistics
     memory_mb: float
@@ -137,6 +138,46 @@ class UploadResponse(BaseModel):
 
     column_statistics: dict[str, ColumnStatistics]
     charts: list[ChartConfig] = Field(default_factory=list)
+
+
+def generate_ai_summary(summary: dict, column_statistics: dict) -> str:
+    """Call LLM to generate a natural language dataset summary."""
+    rows = summary.get("rows", 0)
+    columns = summary.get("columns", 0)
+    schema = summary.get("schema", [])
+
+    col_descriptions = ", ".join(
+        f"{col['name']} ({col['dtype']})"
+        for col in schema[:8]
+    )
+
+    stats_lines = []
+    for col_name, stats in list(column_statistics.items())[:4]:
+        if stats.mean is not None:
+            stats_lines.append(
+                f"{col_name}: min={stats.minimum:.1f}, "
+                f"avg={stats.mean:.1f}, max={stats.maximum:.1f}"
+            )
+
+    stats_text = "\n".join(
+        stats_lines) if stats_lines else "No numeric columns."
+
+    prompt = f"""You are an expert data analyst. Analyse this dataset and write a 2-3 sentence insight summary for a business user. Be specific, use the actual numbers, and highlight what's interesting or notable. Do not use bullet points. Write in plain English as if presenting to a manager.
+
+Dataset: {rows} rows × {columns} columns
+Columns: {col_descriptions}
+Numeric statistics:
+{stats_text}
+
+Write only the summary paragraph, nothing else."""
+
+    try:
+        return router.route(prompt, "groq")
+    except Exception:
+        return (
+            f"Dataset contains {rows} rows and {columns} columns "
+            f"with {len(column_statistics)} numeric column(s) identified for analysis."
+        )
 
 
 @app.post(
@@ -177,9 +218,17 @@ async def upload(file: UploadFile = File(...)) -> UploadResponse:
         df = pd.read_csv(tmp_path) if tmp_path.endswith(
             ".csv") else pd.read_excel(tmp_path)
 
+        # Only convert to datetime if the column is object dtype AND doesn't
+        # look like plain numbers (pd.to_datetime will otherwise happily
+        # misparse short numeric strings like "23" or "85" as dates).
         for column in df.columns:
-            with contextlib.suppress(Exception):
-                df[column] = pd.to_datetime(df[column])
+            if df[column].dtype == object:
+                numeric_attempt = pd.to_numeric(df[column], errors="coerce")
+                looks_numeric = numeric_attempt.notna().mean() > 0.8
+                if looks_numeric:
+                    continue
+                with contextlib.suppress(Exception):
+                    df[column] = pd.to_datetime(df[column])
 
         # Build schema summary
         summary_builder = SchemaSummaryBuilder()
@@ -189,7 +238,7 @@ async def upload(file: UploadFile = File(...)) -> UploadResponse:
         chunker = DatasetChunker()
         chunks = chunker.chunk(df, window_size=10)
 
-       # Build schema detail for response
+        # Build schema detail for response
         dtype_map = {
             "int": ["int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "uint64"],
             "float": ["float16", "float32", "float64"],
@@ -234,24 +283,23 @@ async def upload(file: UploadFile = File(...)) -> UploadResponse:
 
         # Statistics for every numeric column
         column_statistics: dict[str, ColumnStatistics] = {}
-
         numeric_df = df.select_dtypes(include=["number"])
 
         for column in numeric_df.columns:
             series = numeric_df[column]
-
             column_statistics[column] = ColumnStatistics(
                 dtype=str(series.dtype),
-
                 count=int(series.count()),
                 null_count=int(series.isnull().sum()),
-
                 mean=float(series.mean()) if series.count() else None,
                 median=float(series.median()),
                 minimum=float(series.min()),
                 maximum=float(series.max()),
                 std=float(series.std()) if series.count() > 1 else 0.0,
             )
+
+        # AI summary — called after column_statistics is fully populated
+        ai_summary = generate_ai_summary(summary, column_statistics)
 
         # Create session
         session_id = str(uuid.uuid4())
@@ -304,21 +352,22 @@ async def upload(file: UploadFile = File(...)) -> UploadResponse:
             preview=preview,
             charts=charts,
             insights=insights,
-
+            ai_summary=ai_summary,
             memory_mb=memory_mb,
             null_percentage=null_percentage,
             duplicate_rows=duplicate_rows,
             numeric_columns=numeric_columns,
-            column_statistics=column_statistics
+            column_statistics=column_statistics,
         )
     finally:
         # Clean up temp file
         Path(tmp_path).unlink()
 
-
 # ============================================================================
 # /chat endpoint (stub for now)
 # ============================================================================
+
+
 class ChatRequest(BaseModel):
     session_id: str
     model_id: str
@@ -508,7 +557,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
     Keep your answer concise (2-4 sentences unless more detail is clearly needed)."""
 
     try:
-        answer = router.route(req.model_id, prompt)  # type: ignore
+        answer = router.route(prompt, req.model_id)  # type: ignore
     except Exception as e:
         answer = f"Error calling LLM: {str(e)}"
 

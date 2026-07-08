@@ -16,7 +16,7 @@ class GroqAdapter:
     Groq's foreign socket is on the other.
     """
 
-    def __init__(self, model: str = "llama-3.1-70b-versatile"):
+    def __init__(self, model: str = "llama-3.3-70b-versatile"):
         """
         Sets up the Groq client with the API key from settings.
         model → which Groq-hosted model to use.

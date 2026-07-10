@@ -10,12 +10,12 @@ interface LandingPageProps {
 
 export default function LandingPage({ onStart }: LandingPageProps) {
   return (
-    <>
+    <div className="min-h-screen bg-[#0d0e12] text-white">
       <Navbar onStart={onStart} />
       <Hero onStart={onStart} />
       <Features />
       <Forecast />
       <Footer />
-    </>
+    </div>
   );
 }

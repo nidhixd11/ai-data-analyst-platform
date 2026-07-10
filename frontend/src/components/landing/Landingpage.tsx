@@ -1,23 +1,21 @@
-import Navbar from "./Navbar";
 import Hero from "./Hero";
-import SearchBar from "./SearchBar";
 import Features from "./Features";
 import Forecast from "./Forecast";
 import Footer from "./Footer";
+import Navbar from "./Navbar";
 
-export default function LandingPage() {
-  const handleStart = () => {
-    // handle start action here
-  };
+interface LandingPageProps {
+  onStart: () => void;
+}
 
+export default function LandingPage({ onStart }: LandingPageProps) {
   return (
-    <div className="min-h-screen bg-black">
-      <Navbar  onStart={handleStart} />
-      <Hero onStart={handleStart}/>
-      <SearchBar />
+    <>
+      <Navbar onStart={onStart} />
+      <Hero onStart={onStart} />
       <Features />
       <Forecast />
       <Footer />
-    </div>
+    </>
   );
 }

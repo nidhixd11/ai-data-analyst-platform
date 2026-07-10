@@ -1,7 +1,7 @@
 import { useState } from "react";
 import Layout from "./components/Layout";
 import RightRail from "./components/RightRail";
-import LandingPage from "./components/Landingpage";
+import LandingPage from "./components/landing/Landingpage";
 import UploadZone from "./features/upload/UploadZone";
 import SuggestionPills from "./features/upload/SuggestionPills";
 import Dashboard from "./features/dashboard/Dashboard";

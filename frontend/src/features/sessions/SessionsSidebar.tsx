@@ -25,12 +25,16 @@ export default function SessionsSidebar({
   return (
     <aside className="hidden w-64 shrink-0 flex-col border-r border-[var(--color-border)] bg-[var(--color-surface)] lg:flex">
       {/* Brand */}
-      <div className="flex items-center gap-2 border-b border-[var(--color-border)] px-4 py-3.5">
+      <button
+        type="button"
+        onClick={onNewSession}
+        className="flex items-center gap-2 border-b border-[var(--color-border)] px-4 py-3.5 w-full hover:opacity-80 transition"
+      >
         <div className="h-6 w-6 rounded-md bg-[var(--color-accent)]" />
         <span className="text-sm font-semibold tracking-tight">
           Data Analyst Platform
         </span>
-      </div>
+      </button>
 
       {/* New chat */}
       <div className="px-3 pt-3">
@@ -46,7 +50,6 @@ export default function SessionsSidebar({
 
       {/* Nav rail */}
       <nav className="flex flex-col gap-0.5 px-3 py-3">
-        <NavItem icon={<GridIcon />} label="Dashboard" />
         <NavItem icon={<ChatIcon />} label="Chat" active />
         <NavItem icon={<FolderIcon />} label="Files" />
         <NavItem icon={<ChartIcon />} label="Charts" />
@@ -293,17 +296,6 @@ function UserIcon() {
     >
       <circle cx="12" cy="8" r="4" />
       <path d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6" />
-    </svg>
-  );
-}
-
-function GridIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
-      <rect x="3" y="3" width="7" height="7" rx="1" />
-      <rect x="14" y="3" width="7" height="7" rx="1" />
-      <rect x="3" y="14" width="7" height="7" rx="1" />
-      <rect x="14" y="14" width="7" height="7" rx="1" />
     </svg>
   );
 }

@@ -6,6 +6,7 @@ interface SessionsSidebarProps {
   onSelectSession: (id: string) => void;
   onDeleteSession: (id: string) => void;
   onNewSession: () => void;
+  onGoHome: () => void;
 }
 
 /**
@@ -21,13 +22,14 @@ export default function SessionsSidebar({
   onSelectSession,
   onDeleteSession,
   onNewSession,
+  onGoHome,
 }: SessionsSidebarProps) {
   return (
     <aside className="hidden w-64 shrink-0 flex-col border-r border-[var(--color-border)] bg-[var(--color-surface)] lg:flex">
       {/* Brand */}
       <button
         type="button"
-        onClick={onNewSession}
+        onClick={onGoHome}
         className="flex items-center gap-2 border-b border-[var(--color-border)] px-4 py-3.5 w-full hover:opacity-80 transition"
       >
         <div className="h-6 w-6 rounded-md bg-[var(--color-accent)]" />

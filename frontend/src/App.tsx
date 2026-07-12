@@ -93,6 +93,7 @@ function App() {
           onSelectSession={handleSelectSession}
           onDeleteSession={handleDeleteSession}
           onNewSession={handleNewSession}
+          onGoHome={() => setShowLanding(true)}
         />
       }
       rightRail={

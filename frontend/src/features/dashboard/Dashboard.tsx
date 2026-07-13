@@ -7,20 +7,24 @@ interface DashboardProps {
   result: UploadResponse;
   filename: string;
   onReset: () => void;
+  currency: "USD" | "INR";
+  onCurrencyChange: (c: "USD" | "INR") => void;
 }
 
 /**
  * Post-upload view. Renders:
  *  - Header strip (filename + reset)
  *  - Three stat tiles (rows / columns / detected format)
- *  - Live Insight Summary card (T-133 Part 2A)
- *  - Revenue Trend chart placeholder (T-133 Part 2A)
+ *  - AI Dataset Summary (InsightSummary)
+ *  - Auto-generated chart (TrendChart)
  *  - Schema table
  */
 export default function Dashboard({
   result,
   filename,
   onReset,
+  currency,
+  onCurrencyChange,
 }: DashboardProps) {
   return (
     <div className="flex flex-col gap-6">
@@ -40,7 +44,11 @@ export default function Dashboard({
       </div>
 
       <InsightSummary result={result} />
-      <TrendChart chart={result.charts?.[0]} />
+      <TrendChart
+        chart={result.charts?.[0]}
+        currency={currency}
+        onCurrencyChange={onCurrencyChange}
+      />
 
       <section className="flex flex-col gap-3">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
@@ -51,6 +59,7 @@ export default function Dashboard({
     </div>
   );
 }
+
 function HeaderStrip({
   filename,
   detectedFormat,

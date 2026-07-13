@@ -22,24 +22,17 @@ import type { ChatMessage } from "./features/chat/mockChat";
 
 function App() {
   const [showLanding, setShowLanding] = useState(true);
-  const [pendingPrompt, setPendingPrompt] = useState<string | undefined>(
-    undefined,
-  );
+  const [pendingPrompt, setPendingPrompt] = useState<string | undefined>(undefined);
   const [rightRailOpen, setRightRailOpen] = useState(true);
+  const [currency, setCurrency] = useState<"USD" | "INR">("USD");
 
-  // Load saved sessions + last active session on first mount.
   const [sessions, setSessions] = useState<Session[]>(() => loadSessions());
-  const [activeSessionId, setActiveSessionIdState] = useState<string | null>(
-    () => {
-      const stored = loadSessions();
-      const lastActive = loadActiveSessionId();
-      return lastActive && stored.some((s) => s.id === lastActive)
-        ? lastActive
-        : null;
-    },
-  );
+  const [activeSessionId, setActiveSessionIdState] = useState<string | null>(() => {
+    const stored = loadSessions();
+    const lastActive = loadActiveSessionId();
+    return lastActive && stored.some((s) => s.id === lastActive) ? lastActive : null;
+  });
 
-  /** Wrapped setter that also persists the active id. */
   function setActiveSession(id: string | null) {
     setActiveSessionIdState(id);
     saveActiveSessionId(id);
@@ -74,7 +67,6 @@ function App() {
     setPendingPrompt(prompt);
   }
 
-  /** Persist chat messages for the active session. */
   function handleMessagesChange(messages: ChatMessage[]) {
     if (!activeSessionId) return;
     setSessions((prev) => updateSession(prev, activeSessionId, { messages }));
@@ -102,6 +94,8 @@ function App() {
           result={activeSession?.result}
           sessions={sessions}
           onSelectSession={handleSelectSession}
+          currency={currency}
+          onCurrencyChange={setCurrency}
         />
       }
       rightRailOpen={rightRailOpen}
@@ -118,10 +112,11 @@ function App() {
             result={activeSession.result}
             filename={activeSession.filename}
             onReset={handleNewSession}
+            currency={currency}
+            onCurrencyChange={setCurrency}
           />
           <SuggestionPills disabled={false} onPick={handleSuggestionPick} />
           <ChatPanel
-            // Keying by session id resets local chat input/state when switching.
             key={activeSession.id}
             sessionId={activeSession.result.session_id}
             initialPrompt={pendingPrompt}

@@ -78,6 +78,9 @@ export default function TrendChart({ chart, currency, onCurrencyChange }: Props)
     ? sortedData.map((row) => ({
       ...row,
       [chart.y_axis]: convertValue(row[chart.y_axis], currency),
+      [chart.x_axis]: isBusinessColumn(chart.x_axis)
+        ? convertValue(row[chart.x_axis], currency)
+        : row[chart.x_axis],
     }))
     : sortedData;
 
@@ -176,21 +179,37 @@ export default function TrendChart({ chart, currency, onCurrencyChange }: Props)
                 />
               </LineChart>
             ) : activeType === "scatter" ? (
-              <ScatterChart margin={{ top: 20, right: 20, left: 10, bottom: 20 }}>
+              <ScatterChart margin={{ top: 20, right: 20, left: 10, bottom: 30 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
                 <XAxis
                   type="number"
                   dataKey={chart.x_axis}
                   name={chart.x_axis}
                   stroke="var(--color-text-muted)"
-                  label={{ value: chart.x_axis, position: "insideBottom", offset: -5, fill: "var(--color-text-muted)" }}
+                  label={{
+                    value: chart.x_axis,
+                    position: "insideBottom",
+                    offset: -10,
+                    fill: "var(--color-text-muted)",
+                    fontSize: 11,
+                  }}
+                  tick={{ fontSize: 11 }}
                 />
                 <YAxis
                   type="number"
                   dataKey={chart.y_axis}
                   name={chart.y_axis}
                   stroke="var(--color-text-muted)"
-                  label={{ value: chart.y_axis, angle: -90, position: "insideLeft", fill: "var(--color-text-muted)" }}
+                  label={{
+                    value: chart.y_axis,
+                    angle: -90,
+                    position: "insideLeft",
+                    offset: 15,
+                    fill: "var(--color-text-muted)",
+                    fontSize: 11,
+                  }}
+                  tick={{ fontSize: 11 }}
+                  width={60}
                 />
                 <Tooltip />
                 <Scatter data={convertedData} fill={ACCENT} />

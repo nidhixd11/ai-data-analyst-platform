@@ -13,22 +13,35 @@ import {
   Tooltip,
 } from "recharts";
 
-import type { ChartConfig } from "../../types"; // <-- adjust this import path if needed
+import type { ChartConfig } from "../../types";
 
 interface Props {
   chart?: ChartConfig;
+  currency: "USD" | "INR";
+  onCurrencyChange: (c: "USD" | "INR") => void;
 }
 
 type RenderableType = "bar" | "line" | "scatter";
 
 const ACCENT = "var(--color-accent)";
+const USD_TO_INR = 84;
 
-export default function TrendChart({ chart }: Props) {
+const BUSINESS_KEYWORDS = [
+  "revenue", "sales", "profit", "amount", "price",
+  "income", "earnings", "salary", "cost", "spend", "budget",
+];
+
+function isBusinessColumn(name: string): boolean {
+  return BUSINESS_KEYWORDS.some((k) => name.toLowerCase().includes(k));
+}
+
+function convertValue(val: unknown, currency: "USD" | "INR"): number {
+  const n = Number(val);
+  return currency === "INR" ? n * USD_TO_INR : n;
+}
+
+export default function TrendChart({ chart, currency, onCurrencyChange }: Props) {
   const canToggle = chart && chart.chart_type !== "histogram";
-
-  // Scatter/Line require a numeric x-axis. Bar charts here are built from
-  // a categorical x-axis (e.g. "Employee", "Region") — those types can't
-  // render that data at all, so only offer types that will actually work.
   const xAxisIsCategorical = chart?.chart_type === "bar";
 
   const [selectedType, setSelectedType] = useState<RenderableType>(
@@ -59,12 +72,20 @@ export default function TrendChart({ chart }: Props) {
       })
       : chart.data;
 
-  // Guard: if a categorical-x chart somehow ends up on scatter/line, don't
-  // render an empty plot — explain why instead.
+  const shouldConvert = isBusinessColumn(chart.y_axis) || isBusinessColumn(chart.x_axis);
+
+  const convertedData = shouldConvert
+    ? sortedData.map((row) => ({
+      ...row,
+      [chart.y_axis]: convertValue(row[chart.y_axis], currency),
+    }))
+    : sortedData;
+
   const incompatible = xAxisIsCategorical && activeType !== "bar";
 
   return (
     <article className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
+      {/* Title row + chart type toggle */}
       <div className="mb-1 flex items-center justify-between">
         <h3 className="text-base font-semibold">{chart.title}</h3>
         {canToggle && (
@@ -93,9 +114,26 @@ export default function TrendChart({ chart }: Props) {
         )}
       </div>
 
-      <p className="mb-1 text-xs text-[var(--color-text-muted)]">
-        Automatically generated from uploaded dataset
-      </p>
+      {/* Subtitle row + currency toggle */}
+      <div className="mb-4 flex items-center justify-between">
+        <p className="text-xs text-[var(--color-text-muted)]">
+          Automatically generated from uploaded dataset
+        </p>
+        {shouldConvert && (
+          <div className="flex items-center gap-1 rounded-lg border border-[var(--color-border)] p-0.5">
+            <CurrencyButton
+              label="USD"
+              active={currency === "USD"}
+              onClick={() => onCurrencyChange("USD")}
+            />
+            <CurrencyButton
+              label="INR"
+              active={currency === "INR"}
+              onClick={() => onCurrencyChange("INR")}
+            />
+          </div>
+        )}
+      </div>
 
       {wasReordered && (
         <p className="mb-4 text-xs italic text-amber-600 dark:text-amber-400">
@@ -113,11 +151,10 @@ export default function TrendChart({ chart }: Props) {
           </p>
         </div>
       ) : (
-        <div className={wasReordered ? "h-80" : "mt-4 h-80"}>
+        <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">
-
             {activeType === "bar" ? (
-              <BarChart data={sortedData}>
+              <BarChart data={convertedData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
                 <XAxis dataKey={chart.x_axis} stroke="var(--color-text-muted)" />
                 <YAxis stroke="var(--color-text-muted)" />
@@ -125,7 +162,7 @@ export default function TrendChart({ chart }: Props) {
                 <Bar dataKey={chart.y_axis} fill={ACCENT} radius={[4, 4, 0, 0]} />
               </BarChart>
             ) : activeType === "line" ? (
-              <LineChart data={sortedData}>
+              <LineChart data={convertedData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
                 <XAxis dataKey={chart.x_axis} stroke="var(--color-text-muted)" />
                 <YAxis stroke="var(--color-text-muted)" />
@@ -156,10 +193,10 @@ export default function TrendChart({ chart }: Props) {
                   label={{ value: chart.y_axis, angle: -90, position: "insideLeft", fill: "var(--color-text-muted)" }}
                 />
                 <Tooltip />
-                <Scatter data={chart.data} fill={ACCENT} />
+                <Scatter data={convertedData} fill={ACCENT} />
               </ScatterChart>
             ) : (
-              <BarChart data={chart.data}>
+              <BarChart data={convertedData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
                 <XAxis dataKey={chart.x_axis} stroke="var(--color-text-muted)" />
                 <YAxis stroke="var(--color-text-muted)" />
@@ -167,7 +204,6 @@ export default function TrendChart({ chart }: Props) {
                 <Bar dataKey={chart.x_axis} fill={ACCENT} radius={[4, 4, 0, 0]} />
               </BarChart>
             )}
-
           </ResponsiveContainer>
         </div>
       )}
@@ -175,13 +211,8 @@ export default function TrendChart({ chart }: Props) {
   );
 }
 
-
 function TypeButton({
-  label,
-  active,
-  recommended,
-  disabled,
-  onClick,
+  label, active, recommended, disabled, onClick,
 }: {
   label: string;
   active: boolean;
@@ -212,6 +243,29 @@ function TypeButton({
     >
       {label}
       {recommended && <span className="text-[10px]">★</span>}
+    </button>
+  );
+}
+
+function CurrencyButton({
+  label, active, onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={[
+        "rounded-md px-2.5 py-1 text-xs font-medium transition",
+        active
+          ? "bg-[var(--color-accent)] text-white"
+          : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]",
+      ].join(" ")}
+    >
+      {label}
     </button>
   );
 }

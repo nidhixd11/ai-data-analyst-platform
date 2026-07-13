@@ -9,35 +9,19 @@ interface RightRailProps {
   result?: UploadResponse;
   sessions: Session[];
   onSelectSession: (id: string) => void;
+  currency: "USD" | "INR";
+  onCurrencyChange: (c: "USD" | "INR") => void;
 }
 
-// Business column keyword detection
+const USD_TO_INR = 84;
+
 const REVENUE_KEYWORDS = [
-  "revenue",
-  "sales",
-  "profit",
-  "amount",
-  "price",
-  "income",
-  "earnings",
-  "turnover",
-  "salary",
-  "cost",
-  "spend",
-  "budget",
+  "revenue", "sales", "profit", "amount", "price",
+  "income", "earnings", "turnover", "salary", "cost", "spend", "budget",
 ];
 const CATEGORY_KEYWORDS = [
-  "region",
-  "category",
-  "department",
-  "product",
-  "segment",
-  "type",
-  "country",
-  "city",
-  "team",
-  "channel",
-  "brand",
+  "region", "category", "department", "product", "segment",
+  "type", "country", "city", "team", "channel", "brand",
 ];
 
 function detectColumns(result: UploadResponse) {
@@ -65,6 +49,8 @@ export default function RightRail({
   result,
   sessions,
   onSelectSession,
+  currency,
+  onCurrencyChange,
 }: RightRailProps) {
   if (hasActiveData && result) {
     return (
@@ -72,6 +58,8 @@ export default function RightRail({
         result={result}
         sessions={sessions}
         onSelectSession={onSelectSession}
+        currency={currency}
+        onCurrencyChange={onCurrencyChange}
       />
     );
   }
@@ -82,13 +70,16 @@ function ActiveRail({
   result,
   sessions,
   onSelectSession,
+  currency,
+  onCurrencyChange,
 }: {
   result: UploadResponse;
   sessions: Session[];
   onSelectSession: (id: string) => void;
+  currency: "USD" | "INR";
+  onCurrencyChange: (c: "USD" | "INR") => void;
 }) {
-  const { revenueColumns, categoryColumns, isBusinessDataset } =
-    detectColumns(result);
+  const { revenueColumns, categoryColumns, isBusinessDataset } = detectColumns(result);
   const uniqueFiles = dedupeByFilename(sessions);
 
   return (
@@ -98,6 +89,8 @@ function ActiveRail({
           result={result}
           revenueColumns={revenueColumns.map((c) => c.name)}
           categoryColumns={categoryColumns.map((c) => c.name)}
+          currency={currency}
+          onCurrencyChange={onCurrencyChange}
         />
       ) : (
         <GenericRail result={result} />
@@ -130,7 +123,7 @@ function ActiveRail({
             label="Memory Usage"
             ok={result.memory_mb < 50}
             warn={result.memory_mb >= 50 && result.memory_mb < 100}
-            value={`${result.memory_mb?.toFixed(2) ?? "N/A"}`}
+            value={`${result.memory_mb?.toFixed(2) ?? "N/A"} MB`}
           />
         </div>
       </Card>
@@ -170,32 +163,58 @@ function BusinessRail({
   result,
   revenueColumns,
   categoryColumns,
+  currency,
+  onCurrencyChange,
 }: {
   result: UploadResponse;
   revenueColumns: string[];
   categoryColumns: string[];
+  currency: "USD" | "INR";
+  onCurrencyChange: (c: "USD" | "INR") => void;
 }) {
   const rows = result.schema.rows;
+  const rate = currency === "INR" ? USD_TO_INR : 1;
 
   return (
     <>
       <Card label="Key Metrics">
+        {/* Currency toggle */}
+        <div className="mb-3 flex items-center justify-between">
+          <span className="text-xs text-[var(--color-text-muted)]">Values in</span>
+          <div className="flex items-center gap-1 rounded-lg border border-[var(--color-border)] p-0.5">
+            {(["USD", "INR"] as const).map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => onCurrencyChange(c)}
+                className={[
+                  "rounded-md px-2 py-0.5 text-xs font-medium transition",
+                  currency === c
+                    ? "bg-[var(--color-accent)] text-white"
+                    : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]",
+                ].join(" ")}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="space-y-3">
           {revenueColumns.slice(0, 3).map((colName) => {
             const stats = result.column_statistics[colName];
             if (!stats) return null;
-
-            const total = stats.mean !== null ? stats.mean * rows : null;
-
+            const total = stats.mean !== null ? stats.mean * rows * rate : null;
             return (
               <KpiBlock
                 key={colName}
                 label={colName}
                 total={total}
-                mean={stats.mean}
-                min={stats.minimum}
-                max={stats.maximum}
+                mean={stats.mean !== null ? stats.mean * rate : null}
+                min={stats.minimum !== null ? stats.minimum * rate : null}
+                max={stats.maximum !== null ? stats.maximum * rate : null}
                 rows={rows}
+                currency={currency}
               />
             );
           })}
@@ -216,12 +235,7 @@ function BusinessRail({
 }
 
 function KpiBlock({
-  label,
-  total,
-  mean,
-  min,
-  max,
-  rows,
+  label, total, mean, min, max, rows, currency,
 }: {
   label: string;
   total: number | null;
@@ -229,7 +243,18 @@ function KpiBlock({
   min: number | null;
   max: number | null;
   rows: number;
+  currency: "USD" | "INR";
 }) {
+  const symbol = currency === "INR" ? "₹" : "$";
+
+  const fmt = (v: number | null) => {
+    if (v === null) return "—";
+    if (Math.abs(v) >= 10_000_000) return `${symbol}${(v / 10_000_000).toFixed(1)}Cr`;
+    if (Math.abs(v) >= 100_000) return `${symbol}${(v / 100_000).toFixed(1)}L`;
+    if (Math.abs(v) >= 1_000) return `${symbol}${(v / 1_000).toFixed(1)}K`;
+    return `${symbol}${v.toFixed(2)}`;
+  };
+
   const range = max !== null && min !== null ? max - min : null;
   const meanPosition =
     range && mean !== null && min !== null && range > 0
@@ -244,11 +269,7 @@ function KpiBlock({
 
       {total !== null && (
         <p className="text-xl font-bold tabular-nums">
-          {total >= 1_000_000
-            ? `${(total / 1_000_000).toFixed(2)}M`
-            : total >= 1_000
-              ? `${(total / 1_000).toFixed(1)}K`
-              : total.toFixed(2)}
+          {fmt(total)}
           <span className="ml-1 text-xs font-normal text-[var(--color-text-muted)]">
             est. total
           </span>
@@ -257,21 +278,15 @@ function KpiBlock({
 
       <div className="mt-2 grid grid-cols-3 gap-1 text-center text-xs text-[var(--color-text-muted)]">
         <div>
-          <p className="font-medium text-[var(--color-text)]">
-            {min?.toFixed(1) ?? "—"}
-          </p>
+          <p className="font-medium text-[var(--color-text)]">{fmt(min)}</p>
           <p>Min</p>
         </div>
         <div>
-          <p className="font-medium text-[var(--color-accent)]">
-            {mean?.toFixed(1) ?? "—"}
-          </p>
+          <p className="font-medium text-[var(--color-accent)]">{fmt(mean)}</p>
           <p>Avg</p>
         </div>
         <div>
-          <p className="font-medium text-[var(--color-text)]">
-            {max?.toFixed(1) ?? "—"}
-          </p>
+          <p className="font-medium text-[var(--color-text)]">{fmt(max)}</p>
           <p>Max</p>
         </div>
       </div>
@@ -297,16 +312,13 @@ function KpiBlock({
 }
 
 function CategoryDistribution({
-  preview,
-  categoryCol,
-  valueCol,
+  preview, categoryCol, valueCol,
 }: {
   preview: Record<string, unknown>[];
   categoryCol: string;
   valueCol: string;
 }) {
   const totals: Record<string, number> = {};
-
   for (const row of preview) {
     const cat = String(row[categoryCol] ?? "Unknown");
     const val = Number(row[valueCol] ?? 0);
@@ -355,22 +367,10 @@ function GenericRail({ result }: { result: UploadResponse }) {
     <>
       <Card label="Dataset Overview">
         <div className="space-y-2.5 text-sm">
-          <OverviewRow
-            label="Rows"
-            value={result.schema.rows.toLocaleString()}
-          />
-          <OverviewRow
-            label="Columns"
-            value={result.schema.columns.toString()}
-          />
-          <OverviewRow
-            label="Memory"
-            value={`${result.memory_mb?.toFixed(2) ?? "N/A"} MB`}
-          />
-          <OverviewRow
-            label="Numeric Columns"
-            value={result.numeric_columns?.toString() ?? "N/A"}
-          />
+          <OverviewRow label="Rows" value={result.schema.rows.toLocaleString()} />
+          <OverviewRow label="Columns" value={result.schema.columns.toString()} />
+          <OverviewRow label="Memory" value={`${result.memory_mb?.toFixed(2) ?? "N/A"} MB`} />
+          <OverviewRow label="Numeric Columns" value={result.numeric_columns?.toString() ?? "N/A"} />
         </div>
       </Card>
 
@@ -445,21 +445,14 @@ function OverviewRow({ label, value }: { label: string; value: string }) {
 }
 
 function HealthRow({
-  label,
-  value,
-  ok,
-  warn,
+  label, value, ok, warn,
 }: {
   label: string;
   value: string;
   ok: boolean;
   warn: boolean;
 }) {
-  const color = ok
-    ? "text-green-600"
-    : warn
-      ? "text-yellow-600"
-      : "text-red-500";
+  const color = ok ? "text-green-600" : warn ? "text-yellow-600" : "text-red-500";
   const icon = ok ? "✓" : warn ? "⚠" : "✗";
 
   return (
@@ -472,13 +465,7 @@ function HealthRow({
   );
 }
 
-function Card({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
+function Card({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <section className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
       <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
@@ -540,7 +527,6 @@ function FileIcon() {
   );
 }
 
-/** Keep only the most recent session per unique filename. */
 function dedupeByFilename(sessions: Session[]): Session[] {
   const seen = new Set<string>();
   const result: Session[] = [];
